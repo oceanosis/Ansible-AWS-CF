@@ -1,7 +1,5 @@
 ---
 
-region: aaa
-
 vpc_stack: myVPC
 subnet_stack: myPublicSubnet
 igw_stack: myIGWRouting

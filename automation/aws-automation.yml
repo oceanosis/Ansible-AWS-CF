@@ -1,6 +1,6 @@
 ---
+# Ufuk Dumlu - 10th Nov 17
 # AWS tasks are run 'locally'
-
 # Authentication details should be passed in as arguments or exported in the shell before running this playbook
 # Ideally they should be stored in Hashicorp's 'Vault'
 # e.g.
@@ -12,7 +12,7 @@
 - name: Create AWS Infrastructure
   hosts: localhost
   connection: local
-  gather_facts: False
+  gather_facts: true
   roles:
     - env
 

@@ -21,7 +21,7 @@
     "MyEC2Instance": {
       "Type": "AWS::EC2::Instance",
       "Properties": {
-        "ImageId": "ami-c998b6b2",
+        "ImageId": "ami-6057e21a",
         "KeyName": {
           "Ref": "KeyName"
         },
@@ -37,10 +37,7 @@
               [
                 "#!/bin/bash -xe\n",
                 "yum update -y\n",
-                "setenforce 0\n",
-                "sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config\n",
-                "# All other installations will be done by Ansible\n",
-                "reboot\n"
+                "# All other installations will be done by Ansible\n"
               ]
             ]
           }

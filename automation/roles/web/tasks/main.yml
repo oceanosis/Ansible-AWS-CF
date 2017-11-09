@@ -1,22 +1,70 @@
 ---
 
-- name: WEB | Install Apache
+- name: Install Apache
   yum:
     name: httpd
     state: present
 
-- name: WEB | Ensure apache is running (and enable it at boot)
+- name: Ensure apache is running (and enable it at boot)
   service: name=httpd state=started enabled=yes
 
-- name: WEB | Install Php
+- name: Install Php
   yum:
      name:
      - php
      - php-gd
      - php-pear
+     - php-mysql
      state: present
 
-- name: WEB | install Hello World PHP script
-  template: src=index.php dest=/var/www/html/index.php mode=0664
-  notify:
+
+# MyBB Installation check | if last operation was successfull
+- stat: path={{ mybbAdminDir }} 
+  ignore_errors: true
+  register: mybb_install
+
+
+- block:
+  - name: INSTALL | Copy all mybb under apache root dir
+    unarchive:
+      src: mybb.tar.gz 
+      dest: "{{ httpDir }}"
+
+  - name: INSTALL | Ensure appdata directory exists
+    file: path={{ mybbAdminDir }} state=directory 
+    register: result
+
+  - debug: msg="{{ result }}"
+
+  - name: INSTALL | Rename config file
+    command: mv {{ httpDir }}/inc/config.default.php {{ httpDir }}/inc/config.php
+
+  - name: INSTALL | Ensure config file exists
+    file: path={{ httpDir }}/inc/config.php
+    notify:
        - restart apache
+
+  - name: INSTALL | Set proper permissions on config files 
+    file: path={{ httpDir }}inc/{{ item }}  mode=0666
+    with_items:
+      - config.php
+      - settings.php
+
+  - name: INSTALL | Set proper permissions on config folders
+    file: path={{ httpDir }}{{ item }} mode=0777 recurse=yes
+    with_items:
+      - cache/
+      - uploads/
+      - admin/backups/
+
+  - name: INSTALL | Set owner for all mybb files
+    file:
+      path: "{{ httpDir }}"
+      owner: "apache"
+      group: "apache"
+      recurse: yes
+    notify:
+      - restart apache
+
+#  Only execute the above task block if we haven't already installed mybb 
+  when: mybb_install.stat.exists == False

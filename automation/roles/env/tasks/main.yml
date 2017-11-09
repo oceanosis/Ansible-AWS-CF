@@ -1,5 +1,9 @@
 ---
 
+#- name: Include all aws vars
+#  include_vars:
+#     dir: "roles/env/vars/main.yml"
+
 - name: VPC Creation
   cloudformation:
     stack_name: "{{ vpc_stack }}"

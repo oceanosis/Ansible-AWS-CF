@@ -66,5 +66,18 @@
     notify:
       - restart apache
 
+  - pause: prompt="Now you have to browse web, fill in DB parameters on page and finalize installation, before hitting ENTER to continue this Ansible playbook"
+
+  - name: INSTALL | Remove install folder
+    file: path={{ httpDir }}install state=absent
+
+  - name: INSTALL | Set proper permissions to config files (for security)
+    file: path={{ httpDir }}inc/{{ item }}  mode=0644
+    with_items:
+      - config.php
+      - settings.php
+
+
 #  Only execute the above task block if we haven't already installed mybb 
-  when: mybb_install.stat.exists == False
+#  when: mybb_install.stat.exists == False
+ 

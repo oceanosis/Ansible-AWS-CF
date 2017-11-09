@@ -2,11 +2,49 @@
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "Public Security Assignments",
   "Resources": {
+    "PrivateSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupName": "Private",
+        "GroupDescription": "Private",
+        "SecurityGroupIngress" : [ {
+         "IpProtocol" : "tcp",
+         "FromPort" : "22",
+         "ToPort" : "22",
+         "CidrIp" : "10.0.0.0/16"
+      } ,
+        {
+         "IpProtocol" : "tcp",
+         "FromPort" : "80",
+         "ToPort" : "80",
+         "CidrIp" : "10.0.0.0/16"
+      },{
+         "IpProtocol" : "tcp",
+         "FromPort" : "3306",
+         "ToPort" : "3306",
+         "CidrIp" : "10.0.0.0/16"
+      }
+        ],
+"VpcId": {"Fn::ImportValue" : {"Fn::Sub" : "VpcId"}},
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          },
+          {
+            "Key": "Name",
+            "Value": "PrivateSG"
+          }
+        ]
+      }
+    },
     "PublicSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupName": "CF-TEST",
-        "GroupDescription": "CF-TEST",
+        "GroupName": "Public",
+        "GroupDescription": "Public",
 	"SecurityGroupIngress" : [ {
          "IpProtocol" : "tcp",
          "FromPort" : "22",
@@ -35,7 +73,7 @@
           },
           {
             "Key": "Name",
-            "Value": "CF-TEST"
+            "Value": "Automation"
           }
         ]
       }
@@ -53,20 +91,30 @@
           },
           {
             "Key": "Name",
-            "Value": "CF-TEST"
+            "Value": "PublicNACL"
           }
         ]
       }
     },
-    "PublicNACLAssociation": {
+    "PublicNACLAssociation1a": {
       "Type": "AWS::EC2::SubnetNetworkAclAssociation",
       "Properties": {
-"SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "SubnetID"}},
+"SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
         "NetworkAclId": {
           "Ref": "PublicNACL"
         }
       }
     },
+    "PublicNACLAssociation1b": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+"SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1b"}},
+        "NetworkAclId": {
+          "Ref": "PublicNACL"
+        }
+      }
+    },
+
     "PublicNACLRule1": {
       "Type": "AWS::EC2::NetworkAclEntry",
       "Properties": {
@@ -218,7 +266,13 @@
   "PublicSecurityGroup" : {
     "Description" : "The security group ID to use for public web servers",
     "Value" :  { "Fn::GetAtt" : ["PublicSecurityGroup", "GroupId"] },
-    "Export" : { "Name" : {"Fn::Sub": "SGID" }}
+    "Export" : { "Name" : {"Fn::Sub": "PublicSGID" }}
+  },
+  "PrivateSecurityGroup" : {
+    "Description" : "The security group ID to use for private servers",
+    "Value" :  { "Fn::GetAtt" : ["PrivateSecurityGroup", "GroupId"] },
+    "Export" : { "Name" : {"Fn::Sub": "PrivateSGID" }}
   }
+
 }
 }

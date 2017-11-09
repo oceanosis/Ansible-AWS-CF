@@ -24,3 +24,12 @@ mybbAdminDir: "{{ httpDir }}/admin"
 # AWS Environment
 ####################################################
 region: us-east-1
+db_name: "mybb"
+db_user: "mybb"
+db_pass: "ufuk1023"
+
+web_instance_count: 1
+aws_pubkey_name: "Automation-Crossover"
+
+# Change RDS Endpoint accordingly
+rds_name: ???us-east-1.rds.amazonaws.com

@@ -52,6 +52,19 @@
 - name: Show Security stack outputs
   debug: msg="Stack outputs are {{ sec_stack.stack_outputs }}"
 
+- name: RDS Multi-AZ Creation
+  cloudformation:
+    stack_name: "{{ rds_stack }}"
+    state: "present"
+    region: "{{ region }}"
+    disable_rollback: true
+    template: "roles/env/files/rds.json"
+  register: "rds_stack"
+
+- name: Show Security stack outputs
+  debug: msg="Stack outputs are {{ rds_stack.stack_outputs }}"
+
+
 - name: EC2 Creation
   cloudformation:
     stack_name: "{{ ec2_stack }}"

@@ -29,7 +29,7 @@
           "MultiAZ": "true",
           "DBInstanceClass": "db.t2.micro",
           "DBName": "mybb",
-          "AllocatedStorage": "5",
+          "AllocatedStorage": "20",
           "MasterUsername": "mybb",
           "MasterUserPassword": "ufuk1023",
           "DBSubnetGroupName" : { "Ref" : "PrivateDBSubnetGroup" },
@@ -59,7 +59,7 @@
           "Handle": {
             "Ref": "WaitHandle"
           },
-          "Timeout": "500"
+          "Timeout": "800"
         }
       }
     
@@ -67,11 +67,16 @@
   "Outputs": {
       "RdsEndpoint": {
         "Description": "RDS MySQL Endpoint",
-        "Value" :  { 
+        "Value": {
+          "Ref": "DBInstance"
+         },
+        "Export" :  {
+           "Name": { 
                 "Fn::GetAtt": [
                   "DBInstance",
                   "Endpoint.Address"
                 ]
+           }
         }
 
       }

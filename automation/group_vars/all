@@ -5,7 +5,7 @@
 ####################################################
 gather_facts: False
 ansible_configuration: "0.0.1"
-inventory_dir: ./hosts
+inventory_dir: /etc/ansible/hosts
 
 ####################################################
 # System
@@ -28,6 +28,8 @@ region: us-east-1
 db_name: "mybb"
 db_user: "mybb"
 db_pass: "ufuk1023"
+
+tempWeb: 54.164.150.252
 
 web_instance_count: 1
 aws_pubkey_name: "Automation-Crossover"

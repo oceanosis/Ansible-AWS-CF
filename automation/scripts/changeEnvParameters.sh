@@ -1,12 +1,24 @@
 #!/bin/bash
 
+# Variables
+if [ -z "$1" ]; then
+echo "REGION parameter is missing"
+exit 1
+fi
+
 REGION=$1
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 PUBLICIP=$(aws ec2 describe-instances --region="$REGION" --filter Name=tag:Name,Values=TempWeb --query "Reservations[*].Instances[*].PublicIpAddress"  --output=text)
-echo "[webservers]" > $DIR/../hosts
-echo $PUBLICIP >> $DIR/../hosts
+
+#sed -i 's/.*TempWeb":.*/"TempWeb": "'$PUBLICIP'",/g'  $DIR/../group_vars/inventory
+mkdir -p /etc/ansible/
+touch /etc/ansible/hosts
+chmod -R 777 /etc/ansible/
+
+echo "[webservers]" > /etc/ansible/hosts
+echo $PUBLICIP >> /etc/ansible/hosts
 
 export ANSIBLE_HOST_KEY_CHECKING=False
 

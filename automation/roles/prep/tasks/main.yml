@@ -6,12 +6,12 @@
 
 - name: Temp EC2 Web IP
   shell: ./scripts/changeEnvParameters.sh {{ region }}
-  register: EC2IP
+  register: output
 
 - name: Temp EC2 Web IP Output
-  debug: msg="EC2 Web IP ->"{{ EC2IP }}
+  debug: msg="Script Output ->"{{ output }}
 
-- name: Ansible in-memory inventory 
-  add_host:
-    hostname: TempWeb
-    inventory_dir: "{{ inventory_dir }}"
+#- name: Ansible in-memory inventory 
+#  add_host:
+#    hostname: TempWeb
+#    inventory_dir: "{{ inventory_dir }}"

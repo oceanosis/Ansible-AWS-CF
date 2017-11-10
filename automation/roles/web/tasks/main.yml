@@ -15,40 +15,49 @@
      - php-gd
      - php-pear
      - php-mysql
+     - mysql57
+     - MySQL-python27
      state: present
 
 
-# MyBB Installation check | if last operation was successfull
-- stat: path={{ mybbAdminDir }} 
+# MyBB Installation check | if config.php exists
+- stat: path={{ httpDir }}/inc/config.php
   ignore_errors: true
   register: mybb_install
 
-
 - block:
-  - name: INSTALL | Copy all mybb under apache root dir
+  - name: COPY | Copy all mybb under apache root dir
     unarchive:
-      src: mybb.tar.gz 
+      src: mybb_ready.tar.gz 
       dest: "{{ httpDir }}"
 
-  - name: INSTALL | Ensure appdata directory exists
-    file: path={{ mybbAdminDir }} state=directory 
-    register: result
+  - name: COPY | Copy database dump file
+    copy:
+      src: mybb_dump.sql
+      dest: /tmp
 
-  - debug: msg="{{ result }}"
+  - name: INSTALL | Create a new database 
+    mysql_db:
+      name: "{{ rdsdb }}"
+      login_host: "{{ rdshost }}"
+      login_user: "{{ rdsuser }}"
+      login_password: "{{ rdspass }}"
+      state: present
 
-  - name: INSTALL | Rename config file
-    command: mv {{ httpDir }}/inc/config.default.php {{ httpDir }}/inc/config.php
+
+  - name: INSTALL | Restore database
+    mysql_db:
+      name: my_db
+      login_host: "{{ rdshost }}"
+      login_password: "{{ rdspass }}"
+      login_user: "{{ rdsuser }}"
+      state: import
+      target: /tmp/mysql_dump.sql
 
   - name: INSTALL | Ensure config file exists
     file: path={{ httpDir }}/inc/config.php
     notify:
        - restart apache
-
-  - name: INSTALL | Set proper permissions on config files 
-    file: path={{ httpDir }}inc/{{ item }}  mode=0666
-    with_items:
-      - config.php
-      - settings.php
 
   - name: INSTALL | Set proper permissions on config folders
     file: path={{ httpDir }}{{ item }} mode=0777 recurse=yes
@@ -65,8 +74,6 @@
       recurse: yes
     notify:
       - restart apache
-
-  - pause: prompt="Now you have to browse web, fill in DB parameters on page and finalize installation, before hitting ENTER to continue this Ansible playbook"
 
   - name: INSTALL | Remove install folder
     file: path={{ httpDir }}install state=absent

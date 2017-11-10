@@ -25,9 +25,9 @@ mybbAdminDir: "{{ httpDir }}/admin"
 # AWS Environment
 ####################################################
 region: us-east-1
-db_name: "mybb"
-db_user: "mybb"
-db_pass: "ufuk1023"
+rdsdb: "mybb"
+rdsuser: "mybb"
+rdspass: "ufuk1023"
 
 tempWeb: 54.164.150.252
 
@@ -35,4 +35,4 @@ web_instance_count: 1
 aws_pubkey_name: "Automation-Crossover"
 
 # Change RDS Endpoint accordingly
-rds_name: ???us-east-1.rds.amazonaws.com
+rdshost: mybb.citotetiemua.us-east-1.rds.amazonaws.com

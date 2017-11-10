@@ -28,8 +28,8 @@
         "InstanceType": {
           "Ref": "InstanceType"
         },
-"SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
-"SecurityGroupIds": [{"Fn::ImportValue" : {"Fn::Sub" : "PublicSGID"}}],
+"SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "SubnetID"}},
+"SecurityGroupIds": [{"Fn::ImportValue" : {"Fn::Sub" : "SGID"}}],
         "UserData": {
           "Fn::Base64": {
             "Fn::Join": [
@@ -51,11 +51,11 @@
           },
           {
             "Key": "Name",
-            "Value": "TempWeb"
+            "Value": "CF-TEST"
           },
           {
             "Key": "Server",
-            "Value": "TempWeb"
+            "Value": "Web1"
           }
         ]
       }

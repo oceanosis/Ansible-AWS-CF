@@ -5,6 +5,7 @@
 ####################################################
 gather_facts: False
 ansible_configuration: "0.0.1"
+inventory_dir: ./hosts
 
 ####################################################
 # System

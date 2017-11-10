@@ -6,13 +6,23 @@
 # e.g.
 # export AWS_ACCESS_KEY_ID=''
 # export AWS_SECRET_ACCESS_KEY=''
-#
+# For Webserver Setup, ssh agent will be used so that app will be installed
+# eval $(ssh-agent) && ssk-add -k AAA.pem
 # Finally, run with `ansible-playbook aws.yml`
 
 - name: Create AWS Infrastructure
   hosts: localhost
   connection: local
-  gather_facts: true
+  gather_facts: false
   roles:
     - env
+    - prep
 
+- name: Webserver Setup
+  hosts: webservers
+  remote_user: ec2-user
+  become: yes
+  become_user: root
+  roles:
+    - common
+    - web

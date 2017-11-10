@@ -1,0 +1,153 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "RDS Multi-Az Mysql Creation",
+  "Parameters": {
+    "DBClass": {
+      "Default": "db.t2.micro",
+      "Description": "Database instance class",
+      "Type": "String",
+      "AllowedValues": [
+        "db.m1.small",
+        "db.t2.micro"
+      ],
+      "ConstraintDescription": "must select a valid database instance type."
+    },
+    "DBName": {
+      "Default": "mybb",
+      "Description": "mybb database name",
+      "Type": "String"
+    },
+    "DBUsername": {
+      "Default": "mybb",
+      "NoEcho": "true",
+      "Description": "mybb database admin account username",
+      "Type": "String"
+    },
+    "DBPassword": {
+      "Default": "ufuk1023",
+      "NoEcho": "true",
+      "Description": "mybb database admin account password",
+      "Type": "String",
+      "MinLength": "8",
+      "MaxLength": "10",
+      "AllowedPattern": "[a-zA-Z0-9]*",
+      "ConstraintDescription": "must contain only alphanumeric characters."
+    },
+    "MultiAZDatabase": {
+      "Default": "true",
+      "Description": "Create a multi-AZ MySQL Amazon RDS database instance",
+      "Type": "String",
+      "AllowedValues": [
+        "true",
+        "false"
+      ],
+      "ConstraintDescription": "must be either true or false."
+    },
+    "DBAllocatedStorage": {
+      "Default": "5",
+      "Description": "The size of the database (Gb)",
+      "Type": "Number",
+      "MinValue": "5",
+      "MaxValue": "20",
+      "ConstraintDescription": "must be between 5 and 20Gb."
+    },
+    "Resources": {
+      "DBInstance": {
+        "Type": "AWS::RDS::DBInstance",
+        "Properties": {
+          
+          "DBName": {
+            "Ref": "DBName"
+          },
+          "Engine": "MySQL",
+          "MultiAZ": {
+            "Ref": "MultiAZDatabase"
+          },
+          "MasterUsername": {
+            "Ref": "DBUsername"
+          },
+          "DBInstanceClass": {
+            "Ref": "DBClass"
+          },
+          "DBSecurityGroups": [
+            {
+              "Ref": "DBSecurityGroup"
+            }
+          ],
+ 	  "DBSubnetGroupName": [
+		{
+	         "Ref": "PrivateDBSubnetGroup"	
+		}
+	  ],
+          "AllocatedStorage": {
+            "Ref": "DBAllocatedStorage"
+          },
+          "MasterUserPassword": {
+            "Ref": "DBPassword"
+          },
+	  "Tags": [
+            {
+              "Key": "Name",
+              "Value": "MyBB-Database"
+            }
+          ]
+        }
+      },
+      "DBSecurityGroup": {
+        "Type": "AWS::RDS::DBSecurityGroup",
+        "Properties": {
+          "DBSecurityGroupIngress": [
+            {
+              "Fn::ImportValue": {
+                "Fn::Sub": "PrivateSGID"
+              }
+            }
+          ],
+          "GroupDescription": "InternalNetworkAccess"
+        }
+      },
+      "DBSubnetGroup": {
+        "Type": "AWS::RDS::DBSubnetGroup",
+        "Properties": {
+          "DBSubnetGroupDescription": "Private DB Subnet Group",
+          "SubnetIds": [
+            {
+              "Fn::ImportValue": {
+                "Fn::Sub": "PrivateSubnetID1a"
+              }
+            },
+            {
+              "Fn::ImportValue": {
+                "Fn::Sub": "PrivateSubnetID1b"
+              }
+            }
+          ]
+        }
+      },
+      "WaitHandle": {
+        "Type": "AWS::CloudFormation::WaitConditionHandle"
+      },
+      "WaitCondition": {
+        "Type": "AWS::CloudFormation::WaitCondition",
+        "DependsOn": "DBInstance",
+        "Properties": {
+          "Handle": {
+            "Ref": "WaitHandle"
+          },
+          "Timeout": "500"
+        }
+      }
+    },
+    "Outputs": {
+      "RdsEndpoint": {
+        "Value": {
+                "Fn::GetAtt": [
+                  "DBInstance",
+                  "Endpoint.Address"
+                ]
+        },
+        "Description": "RDS MySQL Endpoint"
+      }
+    }
+  }
+}

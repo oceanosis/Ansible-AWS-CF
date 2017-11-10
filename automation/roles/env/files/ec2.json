@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "EC2 Creation",
+  "Description": "Zabbix Monitoring Server Creation",
   "Parameters": {
     "InstanceType": {
       "Description": "Type of EC2 instance to launch",
@@ -37,7 +37,8 @@
               [
                 "#!/bin/bash -xe\n",
                 "yum update -y\n",
-                "# All other installations will be done by Ansible\n"
+		"yum install epel-release -y\n",
+		"
               ]
             ]
           }
@@ -63,7 +64,7 @@
 },
     "Outputs": {
       "WebsiteURL": {
-        "Description": "URL for webserver",
+        "Description": "URL for monitoring server",
         "Value": {
           "Fn::Join": [
             "",

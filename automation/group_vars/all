@@ -9,9 +9,6 @@ ansible_configuration: "0.0.1"
 ####################################################
 # System
 ####################################################
-remote_user: ec2-user
-become: yes
-become_user: root
 
 ####################################################
 # Web
@@ -22,7 +19,13 @@ httpDir: /var/www/html/
 # AWS Environment
 ####################################################
 region: us-east-1
-rdsdb: "mybb"
-rdsuser: "mybb"
-rdspass: "ufuk1023"
+
+KeyName: Automation-Test
+MultiAZDb: false
+
+rdsdb: mybb
+rdsuser: mybb
+rdspass: ufuk1023
 rdshost: mybb.citotetiemua.us-east-1.rds.amazonaws.com
+
+

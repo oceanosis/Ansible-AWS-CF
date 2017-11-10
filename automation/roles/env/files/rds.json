@@ -1,6 +1,50 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "RDS Multi-Az Mysql Creation",
+
+
+  "Parameters" : {
+
+    "DBName" : {
+      "Default": "test",
+      "Description" : "database name",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "64",
+      "AllowedPattern" : "[a-zA-Z][a-zA-Z0-9]*",
+      "ConstraintDescription" : "must begin with a letter and contain only alphanumeric characters."
+    },
+
+    "DBUsername" : {
+      "Default": "admin",
+      "NoEcho": "true",
+      "Description" : "database admin account username",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "16",
+      "AllowedPattern" : "[a-zA-Z][a-zA-Z0-9]*",
+      "ConstraintDescription" : "must begin with a letter and contain only alphanumeric characters."
+    },
+
+    "DBPassword" : {
+      "Default": "password",
+      "NoEcho": "true",
+      "Description" : "database admin account password",
+      "Type": "String",
+      "MinLength": "8",
+      "MaxLength": "41",
+      "AllowedPattern" : "[a-zA-Z0-9]*",
+      "ConstraintDescription" : "must contain only alphanumeric characters."
+    },
+
+    "MultiAZDatabase": {
+      "Default": "true",
+      "Description" : "Create a multi-AZ MySQL Amazon RDS database instance",
+      "Type": "String",
+      "ConstraintDescription" : "must be either true or false."
+    }
+  },
+
   "Resources": {
      "PrivateDBSubnetGroup": {
         "Type": "AWS::RDS::DBSubnetGroup",
@@ -26,14 +70,13 @@
         "Type": "AWS::RDS::DBInstance",
         "Properties": {
           "Engine": "MySQL",
-          "MultiAZ": "false",
-          #"MultiAZ": "true",
-          "DBInstanceClass": "db.t2.micro",
-          "DBName": "{{ rdsdb }}",
+          "MultiAZ": { "Ref" : "MultiAZDatabase" },
+          "DBInstanceClass": "db.t2.large",
  	  "StorageType": "gp2",
           "AllocatedStorage": "20",
-          "MasterUsername": "{{ rdsuser }}",
-          "MasterUserPassword": "{{ rdspass }}",
+          "DBName": { "Ref" : "DBName" },
+          "MasterUsername": { "Ref" : "DBUsername" },
+          "MasterUserPassword": { "Ref" : "DBPassword" },
           "DBSubnetGroupName" : { "Ref" : "PrivateDBSubnetGroup" },
           "VPCSecurityGroups": [
             {
@@ -51,20 +94,6 @@
           ]
         }
       }
-#      "WaitHandle": {
-#        "Type": "AWS::CloudFormation::WaitConditionHandle"
-#      },
-#      "WaitCondition": {
-#        "Type": "AWS::CloudFormation::WaitCondition",
-#        "DependsOn": "DBInstance",
-#        "Properties": {
-#          "Handle": {
-#            "Ref": "WaitHandle"
-#          },
-#          "Timeout": "300"
-#        }
-#      }
-    
     },
   "Outputs": {
       "RdsEndpoint": {
@@ -73,6 +102,11 @@
                   "DBInstance",
                   "Endpoint.Address"
                 ]
+        },
+       "Export": {
+          "Name": {
+            "Fn::Sub": "Endpoint"
+           }
         },
         "Description": "RDS MySQL Endpoint"
       }

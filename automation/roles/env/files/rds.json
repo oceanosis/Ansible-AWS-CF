@@ -49,20 +49,20 @@
             }
           ]
         }
-      },
-      "WaitHandle": {
-        "Type": "AWS::CloudFormation::WaitConditionHandle"
-      },
-      "WaitCondition": {
-        "Type": "AWS::CloudFormation::WaitCondition",
-        "DependsOn": "DBInstance",
-        "Properties": {
-          "Handle": {
-            "Ref": "WaitHandle"
-          },
-          "Timeout": "300"
-        }
       }
+#      "WaitHandle": {
+#        "Type": "AWS::CloudFormation::WaitConditionHandle"
+#      },
+#      "WaitCondition": {
+#        "Type": "AWS::CloudFormation::WaitCondition",
+#        "DependsOn": "DBInstance",
+#        "Properties": {
+#          "Handle": {
+#            "Ref": "WaitHandle"
+#          },
+#          "Timeout": "300"
+#        }
+#      }
     
     },
   "Outputs": {

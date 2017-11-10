@@ -11,7 +11,7 @@ yum update -y
 yum install epel-release -y
 yum-config-manager --enable epel
 yum install gcc git python python-devel python-pip make -y
-yum install python-jinja2 python-paramiko PyYAML MySQL-python -y 
+yum install python-mysqldb python-jinja2 python-paramiko PyYAML MySQL-python -y 
 
 # install ansible for deployments
 cd /usr/local/src

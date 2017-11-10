@@ -52,27 +52,39 @@
 - name: Show Security stack outputs
   debug: msg="Stack outputs are {{ sec_stack.stack_outputs }}"
 
-#- name: RDS Multi-AZ Creation
-#  cloudformation:
-#    stack_name: "{{ rds_stack }}"
-#    state: "present"
-#    region: "{{ region }}"
-#    disable_rollback: true
-#    template: "roles/env/files/rds.json"
-#  register: "rds_stack"
-#
-#- name: Show Security stack outputs
-#  debug: msg="Stack outputs are {{ rds_stack.stack_outputs }}"
-
-
-- name: EC2 Creation
+- name: RDS Multi-AZ Creation
   cloudformation:
-    stack_name: "{{ ec2_stack }}"
+    stack_name: "{{ rds_stack }}"
     state: "present"
     region: "{{ region }}"
     disable_rollback: true
-    template: "roles/env/files/ec2.json"
-  register: "ec2_stack"
+    template: "roles/env/files/rds.json"
+  register: "rds_stack"
 
-- name: Show EC2 stack outputs
-  debug: msg="Stack outputs are {{ ec2_stack.stack_outputs }}"
+- name: Show Security stack outputs
+  debug: msg="Stack outputs are {{ rds_stack.stack_outputs }}"
+
+- name: AutoScale-ELB Creation
+  cloudformation:
+    stack_name: "{{ auto_stack }}"
+    state: "present"
+    region: "{{ region }}"
+    disable_rollback: true
+    template: "roles/env/files/autoscale.json"
+  register: "auto_stack"
+
+- name: Show AutoScaling stack outputs
+  debug: msg="Stack outputs are {{ auto_stack.stack_outputs }}"
+
+
+#- name: EC2 Creation
+#  cloudformation:
+#    stack_name: "{{ ec2_stack }}"
+#    state: "present"
+#    region: "{{ region }}"
+#    disable_rollback: true
+#    template: "roles/env/files/ec2.json"
+#  register: "ec2_stack"
+#
+#- name: Show EC2 stack outputs
+#  debug: msg="Stack outputs are {{ ec2_stack.stack_outputs }}"

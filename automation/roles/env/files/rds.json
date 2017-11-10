@@ -26,13 +26,14 @@
         "Type": "AWS::RDS::DBInstance",
         "Properties": {
           "Engine": "MySQL",
-          "MultiAZ": "true",
+          "MultiAZ": "false",
+          #"MultiAZ": "true",
           "DBInstanceClass": "db.t2.micro",
-          "DBName": "mybb",
+          "DBName": "{{ rdsdb }}",
  	  "StorageType": "gp2",
           "AllocatedStorage": "20",
-          "MasterUsername": "mybb",
-          "MasterUserPassword": "ufuk1023",
+          "MasterUsername": "{{ rdsuser }}",
+          "MasterUserPassword": "{{ rdspass }}",
           "DBSubnetGroupName" : { "Ref" : "PrivateDBSubnetGroup" },
           "VPCSecurityGroups": [
             {

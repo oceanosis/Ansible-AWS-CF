@@ -1,7 +1,9 @@
 ---
 
-vpc_stack: myVPC
-subnet_stack: myPublicSubnet
-igw_stack: myIGWRouting
-sec_stack: mySecuritySettings
-ec2_stack: myWebServers
+vpc_stack: VPC
+subnet_stack: PublicSubnet
+igw_stack: IGWRouting
+sec_stack: SecuritySettings
+ec2_stack: WebServers
+auto_stack: AutoScalingSettings
+rds_stack: DBServers

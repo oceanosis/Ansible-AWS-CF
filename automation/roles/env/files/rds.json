@@ -60,30 +60,22 @@
           "Handle": {
             "Ref": "WaitHandle"
           },
-          "Timeout": "800"
+          "Timeout": "300"
         }
       }
     
     },
   "Outputs": {
       "RdsEndpoint": {
-        "Description": "RDS MySQL Endpoint",
         "Value": {
-          "Ref": "DBInstance"
-         },
-        "Export" :  {
-           "Name": { 
                 "Fn::GetAtt": [
                   "DBInstance",
                   "Endpoint.Address"
                 ]
-           }
-        }
-
+        },
+        "Description": "RDS MySQL Endpoint"
       }
    }
   
 }
-
-
 

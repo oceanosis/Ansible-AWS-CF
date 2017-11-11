@@ -82,32 +82,37 @@
 - name: Show Bastion stack outputs
   debug: msg="Stack outputs are {{ jump_stack.stack_outputs }}"
 
-- name: AutoScale-ELB Creation
+#- name: AutoScale-ELB Creation
+#  cloudformation:
+#    stack_name: "{{ auto_stack }}"
+#    state: "present"
+#    region: "{{ region }}"
+#    disable_rollback: true
+#    template: "roles/env/files/autoscale.json"
+#  args:
+#    template_parameters:
+#      DBName: "{{ rdsdb }}"
+#      DBUser: "{{ rdsuser }}"
+#      DBPassword: "{{ rdspass }}"
+#  register: "auto_stack"
+#
+#- name: Show AutoScaling stack outputs
+#  debug: msg="Stack outputs are {{ auto_stack.stack_outputs }}"
+
+
+- name: Zabbix Server Creation
   cloudformation:
-    stack_name: "{{ auto_stack }}"
+    stack_name: "{{ mon_stack }}"
     state: "present"
     region: "{{ region }}"
     disable_rollback: true
-    template: "roles/env/files/autoscale.json"
+    template: "roles/env/files/mon.json"
   args:
     template_parameters:
       DBName: "{{ rdsdb }}"
       DBUser: "{{ rdsuser }}"
       DBPassword: "{{ rdspass }}"
-  register: "auto_stack"
+  register: "mon_stack"
 
-- name: Show AutoScaling stack outputs
-  debug: msg="Stack outputs are {{ auto_stack.stack_outputs }}"
-
-
-#- name: Zabbix Server Creation
-#  cloudformation:
-#    stack_name: "{{ mon_stack }}"
-#    state: "present"
-#    region: "{{ region }}"
-#    disable_rollback: true
-#    template: "roles/env/files/ec2.json"
-#  register: "mon_stack"
-#
-#- name: Show EC2 stack outputs
-#  debug: msg="Stack outputs are {{ mon_stack.stack_outputs }}"
+- name: Show EC2 stack outputs
+  debug: msg="Stack outputs are {{ mon_stack.stack_outputs }}"

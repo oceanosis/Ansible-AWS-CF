@@ -1,0 +1,157 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Zabbix Monitoring Server Creation",
+  "Parameters": {
+    "InstanceType": {
+      "Description": "Type of EC2 instance to launch",
+      "Type": "String",
+      "Default": "t2.micro",
+      "AllowedValues": [
+        "t2.micro"
+      ],
+      "ConstraintDescription": "Must be a valid EC2 instance type"
+    },
+    "KeyName": {
+      "Description": "Key Pair Name",
+      "Type": "String",
+      "Default": "Automation-Test"
+    },
+  "DBName" : {
+     "Type": "String",
+      "Default": "test"
+    },
+
+    "DBUser" : {
+      "Type": "String",
+      "Default": "admin"
+    },
+
+    "DBPassword" : {
+       "Type": "String",
+      "Default": "password"
+    }
+
+  },
+  "Resources": {
+    "MonitoringInstance": {
+      "Type": "AWS::EC2::Instance",
+	"Type": "AWS::EC2::Instance",
+        "Metadata" : {
+        "Comment1" : "Configure the bootstrap helpers to install the Apache Web Server and PHP",
+	        "AWS::CloudFormation::Init" : {
+          "configSets" : {
+            "InstallAndRun" : [ "Install", "Configure" ]
+          },
+
+          "Install" : {
+            "packages" : {
+              "yum" : {
+                "mysql"        : [],
+                "mysql-libs"   : [],
+                "httpd"        : [],
+                "php"          : [],
+                "php-mysql"    : []
+                "epel-release"          : [],
+                "httpd-devel"          : [],
+                "php-cli"          : [],
+                "php-pear"          : [],
+                "php-gd"          : [],
+                "php-mbstring"          : [],
+                "php-xml"          : []
+              },
+		"commands": {
+	              "01" : { "command" : "service httpd start"  },
+	              "02" : { "command" : "rpm -Uvh http://repo.zabbix.com/zabbix/3.0/rhel/7/x86_64/zabbix-release-3.0-1.el7.noarch.rpm"  },
+	              "03" : { "command" : "yum install zabbix-server-mysql zabbix-web-mysql zabbix-agent zabbix-java-gateway -y"  }
+
+		}
+            },
+
+            "/tmp/setup.mysql" : {
+                "content" : { "Fn::Join" : ["", [
+                  "CREATE DATABASE zabbixdb CHARACTER SET UTF8;\n",
+                  "GRANT ALL ON RIVILEGES on zabbixdb.* to zabbix@", { "Ref" : "DBName" }, " IDENTIFIED BY '",{ "Ref" : "DBPassword" },"';\n",
+                  "FLUSH PRIVILEGES;\n"
+                  ]]},
+                "mode"  : "000400",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/etc/cfn/cfn-hup.conf" : {
+                "content" : { "Fn::Join" : ["", [
+                  "[main]\n",
+                  "stack=", { "Ref" : "AWS::StackId" }, "\n",
+                  "region=", { "Ref" : "AWS::Region" }, "\n"
+                ]]},
+                "mode"    : "000400",
+                "owner"   : "root",
+                "group"   : "root"
+              },
+
+              "/etc/cfn/hooks.d/cfn-auto-reloader.conf" : {
+                "content": { "Fn::Join" : ["", [
+                  "[cfn-auto-reloader-hook]\n",
+                  "triggers=post.update\n",
+                  "path=Resources.WebServerInstance.Metadata.AWS::CloudFormation::Init\n",
+                  "action=/opt/aws/bin/cfn-init -v ",
+                  "         --stack ", { "Ref" : "AWS::StackName" },
+                  "         --resource MonitoringInstance ",
+                  "         --configsets InstallAndRun ",
+                  "         --region ", { "Ref" : "AWS::Region" }, "\n",
+                  "runas=root\n"
+                ]]}
+              }
+            }
+            },
+
+            "services" : {
+              "sysvinit" : {  
+                "httpd"   : { "enabled" : "true", "ensureRunning" : "true" },
+                "cfn-hup" : { "enabled" : "true", "ensureRunning" : "true",
+                              "files" : ["/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf"]}
+              }
+            }
+          },
+          "Configure" : {
+            "commands" : {
+              "01_set_mysql_root_password" : {
+                "command" : { "Fn::Join" : ["", ["mysqladmin -u ",{ "Ref" : "DBUsername" }," password '", { "Ref" : "DBPassword" }, "'"]]},
+                "test" : { "Fn::Join" : ["", ["$(mysql ", { "Ref" : "DBUsername" }, " -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"]]}
+              },
+              "02_create_database" : {
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < /tmp/setup.mysql"]]},
+                "test" : { "Fn::Join" : ["", ["$(mysql ", { "Ref" : "DBUsername" }, " -u ",{ "Ref" : "DBUsername" }," --password='", { "Ref" : "DBPassword" }, "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"]]}
+              },
+	      "03_restore_database" : {
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/schema.sql"]]},
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < usr/share/doc/zabbix-server-mysql-3.0.0/create/images.sql"]]},
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/data.sql"]]}
+              },
+	      "04_restart" : {
+                "command" : "service zabbix-server start"
+	      }
+            }
+          }
+
+     }
+  },
+    "Outputs": {
+      "WebsiteURL": {
+        "Description": "URL for monitoring server",
+        "Value": {
+          "Fn::Join": [
+            "",
+            [
+              "http://",
+              {
+                "Fn::GetAtt": [
+                  "MyEC2Instance",
+                  "PublicDnsName"
+                ]
+              }, "/zabbix"
+            ]
+          ]
+        }
+      }
+    }
+}

@@ -246,6 +246,7 @@
     "LaunchConfig": {
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Metadata": {
+        "Comment1" : "Install the Apache Web Server, PHP and Deploy MyBB",
         "AWS::CloudFormation::Init": {
           "config": {
             "yum": {
@@ -497,31 +498,28 @@
               "",
               [
                 "#!/bin/bash -xe\n",
-                "yum update -y aws-cfn-bootstrap\n",
+		"yum -y update\n",
+		"yum -y install python-pip\n",
+		"pip install pystache \n",
+		"pip install argparse\n",
+		"pip install python-daemon\n",
+		"pip install requests\n",
+                "yum install -y aws-apitools-cfn\n",
+
                 "# Install the files and packages from the metadata\n",
-                "/opt/aws/bin/cfn-init -v ",
-                "         --stack ",
-                {
-                  "Ref": "AWS::StackName"
-                },
-                "         --resource LaunchConfig ",
-                "         --region ",
-                {
-                  "Ref": "AWS::Region"
-                },
-                "\n",
-                "# Signal the status from cfn-init\n",
-                "/opt/aws/bin/cfn-signal -e $? ",
-                "         --stack ",
-                {
-                  "Ref": "AWS::StackName"
-                },
-                "         --resource WebServerGroup ",
-                "         --region ",
-                {
-                  "Ref": "AWS::Region"
-                },
-                "\n"
+             "yum update -y aws-cfn-bootstrap\n",
+
+             "# Install the files and packages from the metadata\n",
+             "/opt/aws/bin/cfn-init -v ",
+             "         --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource LaunchConfig ",
+             "         --region ", { "Ref" : "AWS::Region" }, "\n",
+
+             "# Signal the status from cfn-init\n",
+             "/opt/aws/bin/cfn-signal -e $? ",
+             "         --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource WebServerGroup ",
+             "         --region ", { "Ref" : "AWS::Region" }, "\n",
               ]
             ]
           }

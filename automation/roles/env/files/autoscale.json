@@ -53,8 +53,8 @@
         "CrossZone" : "true",
         "SecurityGroups" : [ { "Ref" : "LoadBalancerSecurityGroup" } ],
         "Subnets" : [
-	  {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
-          {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1b"}}
+	  {"Fn::ImportValue" : {"Fn::Sub" : "PrivateSubnetID1a"}},
+          {"Fn::ImportValue" : {"Fn::Sub" : "PrivateSubnetID1b"}}
         ],
         "LBCookieStickinessPolicy": [
           {

@@ -35,7 +35,6 @@
   "Resources": {
     "MonitoringInstance": {
       "Type": "AWS::EC2::Instance",
-	"Type": "AWS::EC2::Instance",
         "Metadata" : {
         "Comment1" : "Configure the bootstrap helpers to install the Apache Web Server and PHP",
 	  "AWS::CloudFormation::Init" : {
@@ -101,7 +100,7 @@
                   "runas=root\n"
                 ]]}
               }
-            }
+            
             },
 
             "services" : {
@@ -110,7 +109,7 @@
                 "cfn-hup" : { "enabled" : "true", "ensureRunning" : "true",
                               "files" : ["/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf"]}
               }
-            }
+            } 
           },
           "Configure" : {
             "commands" : {
@@ -122,18 +121,23 @@
                 "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < /tmp/setup.mysql"]]},
                 "test" : { "Fn::Join" : ["", ["$(mysql ", { "Ref" : "DBUsername" }, " -u ",{ "Ref" : "DBUsername" }," --password='", { "Ref" : "DBPassword" }, "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"]]}
               },
-	      "03_restore_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/schema.sql"]]},
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < usr/share/doc/zabbix-server-mysql-3.0.0/create/images.sql"]]},
+	      "03_database" : {
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/schema.sql"]]}
+	      },
+	      "04_database" : {
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < usr/share/doc/zabbix-server-mysql-3.0.0/create/images.sql"]]}
+	      },
+	      "05_database" : {
                 "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/data.sql"]]}
               },
-	      "04_restart" : {
+	      "06_restart" : {
                 "command" : "service zabbix-server start"
 	      }
             }
           }
 
      }
+    }
   },
     "Outputs": {
       "WebsiteURL": {

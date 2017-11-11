@@ -85,7 +85,7 @@
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
         "GroupDescription" : "Enable HTTP access via port 80 locked down to the ELB and SSH access",
-        "VpcId" : { "Ref" : "VPC" },
+	"VpcId": {"Fn::ImportValue" : {"Fn::Sub" : "VpcId"}},
         "SecurityGroupIngress" : [
           {
             "IpProtocol" : "tcp",

@@ -18,6 +18,33 @@
     }
   },
   "Resources": {
+    "PublicSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupName": "Public",
+        "GroupDescription": "Public",
+        "SecurityGroupIngress" : [ {
+         "IpProtocol" : "tcp",
+         "FromPort" : "22",
+         "ToPort" : "22",
+         "CidrIp" : "0.0.0.0/0"
+         }
+        ],
+	"VpcId": {"Fn::ImportValue" : {"Fn::Sub" : "VpcId"}},
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          },
+          {
+            "Key": "Name",
+            "Value": "BastionSG"
+          }
+        ]
+      }
+    },
     "MyEC2Instance": {
       "Type": "AWS::EC2::Instance",
       "Properties": {
@@ -28,8 +55,8 @@
         "InstanceType": {
           "Ref": "InstanceType"
         },
-"SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
-"SecurityGroupIds": [{"Fn::ImportValue" : {"Fn::Sub" : "PublicSGID"}}],
+	"SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
+	"SecurityGroupIds": [ {"Ref": "PublicSecurityGroup" }]
         "UserData": {
           "Fn::Base64": {
             "Fn::Join": [

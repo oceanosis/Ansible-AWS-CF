@@ -4,7 +4,7 @@ vpc_stack: VPC
 subnet_stack: PublicSubnet
 igw_stack: IGWRouting
 sec_stack: SecuritySettings
-ec2_stack: WebServers
+ec2_stack: MonitoringServer
 auto_stack: AutoScalingSettings
 rds_stack: DBServers
 jump_stack: BastionServer 

@@ -51,10 +51,10 @@
       "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties": {
         "CrossZone" : "true",
-        "SecurityGroups" : [ { "Ref" : "LoadBalancerSecurityGroup" } ],
+         "SecurityGroups" : [ { "Ref" : "LoadBalancerSecurityGroup" } ],
         "Subnets" : [
-	  {"Fn::ImportValue" : {"Fn::Sub" : "PrivateSubnetID1a"}},
-          {"Fn::ImportValue" : {"Fn::Sub" : "PrivateSubnetID1b"}}
+	  {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
+          {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1b"}}
         ],
         "LBCookieStickinessPolicy": [
           {
@@ -79,6 +79,26 @@
           "Interval": "10",
           "Timeout": "5"
         }
+      }
+    },
+    "WebServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP access via port 80 locked down to the ELB and SSH access",
+        "VpcId" : { "Ref" : "VPC" },
+        "SecurityGroupIngress" : [
+          {
+            "IpProtocol" : "tcp",
+            "FromPort" : "80",
+            "ToPort" : "80",
+            "SourceSecurityGroupId" : { "Ref" : "LoadBalancerSecurityGroup" }
+          },
+          {
+            "IpProtocol" : "tcp",
+            "FromPort" : "22",
+            "ToPort" : "22",
+            "CidrIp" : "10.0.0.0/16"
+          }]
       }
     },
     "LoadBalancerSecurityGroup" : {
@@ -107,8 +127,8 @@
 	  "us-east-1a","us-east-1b"
         ],
         "VPCZoneIdentifier" : [
-          {"Fn::ImportValue" : {"Fn::Sub" : "PrivateSubnetID1a"}},
-          {"Fn::ImportValue" : {"Fn::Sub" : "PrivateSubnetID1b"}}
+          {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
+          {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1b"}}
         ],
         "LaunchConfigurationName": {
           "Ref": "LaunchConfig"
@@ -467,9 +487,7 @@
         "InstanceType": {
           "Ref": "InstanceType"
         },
-        "SecurityGroups": [
-	  {"Fn::ImportValue" : {"Fn::Sub" : "PrivateSGID"}}
-        ],
+	"SecurityGroups" : [ {"Ref" : "WebServerSecurityGroup"} ],
         "KeyName": {
           "Ref": "KeyName"
         },

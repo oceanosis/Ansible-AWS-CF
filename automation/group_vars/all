@@ -21,11 +21,8 @@ httpDir: /var/www/html/
 region: us-east-1
 
 KeyName: Automation-Test
-MultiAZDb: false
+MultiAZDb: true
 
 rdsdb: mybb
 rdsuser: mybb
 rdspass: ufuk1023
-rdshost: mybb.citotetiemua.us-east-1.rds.amazonaws.com
-
-

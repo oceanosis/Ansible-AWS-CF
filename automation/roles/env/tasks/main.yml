@@ -28,7 +28,7 @@
 - name: Show Subnet stack outputs
   debug: msg="Stack outputs are {{ subnet_stack.stack_outputs }}"
 
-- name: IGW Route Creation
+- name: IGW NAT Route Creation
   cloudformation:
     stack_name: "{{ igw_stack }}"
     state: "present"
@@ -52,23 +52,23 @@
 - name: Show Security stack outputs
   debug: msg="Stack outputs are {{ sec_stack.stack_outputs }}"
 
-#- name: RDS Multi-AZ Creation
-#  cloudformation:
-#    stack_name: "{{ rds_stack }}"
-#    state: "present"
-#    region: "{{ region }}"
-#    disable_rollback: true
-#    template: "roles/env/files/rds.json"
-#  args:
-#    template_parameters:
-#      DBName: "{{ rdsdb }}"
-#      DBUsername: "{{ rdsuser }}"
-#      DBPassword: "{{ rdspass }}"
-#      MultiAZDatabase: "{{ MultiAZDb }}"
-#  register: "rds_stack"
-#
-#- name: Show Security stack outputs
-#  debug: msg="Stack outputs are {{ rds_stack.stack_outputs }}"
+- name: RDS Multi-AZ Creation
+  cloudformation:
+    stack_name: "{{ rds_stack }}"
+    state: "present"
+    region: "{{ region }}"
+    disable_rollback: true
+    template: "roles/env/files/rds.json"
+  args:
+    template_parameters:
+      DBName: "{{ rdsdb }}"
+      DBUsername: "{{ rdsuser }}"
+      DBPassword: "{{ rdspass }}"
+      MultiAZDatabase: "{{ MultiAZDb }}"
+  register: "rds_stack"
+
+- name: Show Security stack outputs
+  debug: msg="Stack outputs are {{ rds_stack.stack_outputs }}"
 
 - name: Bastion Server Creation
   cloudformation:
@@ -102,12 +102,12 @@
 
 #- name: Zabbix Server Creation
 #  cloudformation:
-#    stack_name: "{{ ec2_stack }}"
+#    stack_name: "{{ mon_stack }}"
 #    state: "present"
 #    region: "{{ region }}"
 #    disable_rollback: true
 #    template: "roles/env/files/ec2.json"
-#  register: "ec2_stack"
+#  register: "mon_stack"
 #
 #- name: Show EC2 stack outputs
-#  debug: msg="Stack outputs are {{ ec2_stack.stack_outputs }}"
+#  debug: msg="Stack outputs are {{ mon_stack.stack_outputs }}"

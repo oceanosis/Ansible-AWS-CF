@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Public Security Assignments",
+  "Description": "Network Security Assignments",
   "Resources": {
     "PrivateSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",

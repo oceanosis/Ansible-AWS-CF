@@ -70,6 +70,18 @@
 #- name: Show Security stack outputs
 #  debug: msg="Stack outputs are {{ rds_stack.stack_outputs }}"
 
+- name: Bastion Server Creation
+  cloudformation:
+    stack_name: "{{ jump_stack }}"
+    state: "present"
+    region: "{{ region }}"
+    disable_rollback: true
+    template: "roles/env/files/bastion.json"
+  register: "jump_stack"
+
+- name: Show Bastion stack outputs
+  debug: msg="Stack outputs are {{ jump_stack.stack_outputs }}"
+
 - name: AutoScale-ELB Creation
   cloudformation:
     stack_name: "{{ auto_stack }}"
@@ -80,7 +92,7 @@
   args:
     template_parameters:
       DBName: "{{ rdsdb }}"
-      DBUsername: "{{ rdsuser }}"
+      DBUser: "{{ rdsuser }}"
       DBPassword: "{{ rdspass }}"
   register: "auto_stack"
 

@@ -1,97 +1,179 @@
 {
-  "AWSTemplateFormatVersion" : "2010-09-09",
-
-  "Description" : "AutoScale - LaunchConfig - LoadBalancer",
-
-  "Parameters" : {
-
-    "KeyName" : {
-      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instances",
-      "Type" : "String",
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AutoScale - LaunchConfig - LoadBalancer",
+  "Parameters": {
+    "KeyName": {
+      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+      "Type": "String",
       "Default": "Automation-Test"
     },
-
-    "InstanceType" : {
-      "Description" : "WebServer EC2 instance type",
-      "Type" : "String",
-      "Default" : "t2.micro",
-      "AllowedValues" : [ "t1.micro","m1.small","t2.micro" ],
-      "ConstraintDescription" : "must be a valid EC2 instance type."
+    "AvailabilityZones": {
+    	"Description": "AZ List",
+    	"Type": "CommaDelimitedList",
+    	"Default": "us-east-1a,us-east-1b"
+    },
+    "InstanceType": {
+      "Description": "WebServer EC2 instance type",
+      "Type": "String",
+      "Default": "t2.micro",
+      "AllowedValues": [
+        "t1.micro",
+        "m1.small",
+        "t2.micro"
+      ],
+      "ConstraintDescription": "must be a valid EC2 instance type."
     },
     "WebServerCapacity": {
       "Default": "2",
-      "Description" : "The initial number of WebServer instances",
+      "Description": "The initial number of WebServer instances",
       "Type": "Number",
       "MinValue": "1",
       "MaxValue": "3",
-      "ConstraintDescription" : "must be between 1 and 3 EC2 instances."
+      "ConstraintDescription": "must be between 1 and 3 EC2 instances."
+    },
+  "DBName" : {
+     "Type": "String",
+      "Default": "test"
+    },
+
+    "DBUser" : {
+      "Type": "String",
+      "Default": "admin"
+    },
+
+    "DBPassword" : {
+       "Type": "String",
+      "Default": "password"
     }
   },
-
-  "Resources" : {
-
-    "ElasticLoadBalancer" : {
-      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
-      "Metadata" : {
-        "Comment1" : "Configure the Load Balancer with a simple health check and cookie-based stickiness",
-        "Comment2" : "Use install path for healthcheck to avoid redirects - ELB healthcheck does not handle 302 return codes"
-      },
-      "Properties" : {
-        "AvailabilityZones" : { "Fn::GetAZs" : "" },
-        "LBCookieStickinessPolicy" : [ {
-          "PolicyName" : "CookieBasedPolicy",
-          "CookieExpirationPeriod" : "30"
-        } ],
-        "Listeners" : [ {
-          "LoadBalancerPort" : "80",
-          "InstancePort" : "80",
-          "Protocol" : "HTTP",
-          "PolicyNames" : [ "CookieBasedPolicy" ]
-        } ],
-        "HealthCheck" : {
-          "Target" : "HTTP:80/index.php",
-          "HealthyThreshold" : "2",
-          "UnhealthyThreshold" : "5",
-          "Interval" : "10",
-          "Timeout" : "5"
+  "Resources": {
+    "ElasticLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "CrossZone" : "true",
+        "SecurityGroups" : [ { "Ref" : "LoadBalancerSecurityGroup" } ],
+        "Subnets" : [
+	  {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
+          {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1b"}}
+        ],
+        "LBCookieStickinessPolicy": [
+          {
+            "PolicyName": "CookieBasedPolicy",
+            "CookieExpirationPeriod": "30"
+          }
+        ],
+        "Listeners": [
+          {
+            "LoadBalancerPort": "80",
+            "InstancePort": "80",
+            "Protocol": "HTTP",
+            "PolicyNames": [
+              "CookieBasedPolicy"
+            ]
+          }
+        ],
+        "HealthCheck": {
+          "Target": "HTTP:80/index.php",
+          "HealthyThreshold": "2",
+          "UnhealthyThreshold": "5",
+          "Interval": "10",
+          "Timeout": "5"
         }
       }
     },
-   "WebServerGroup" : {
-      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+    "LoadBalancerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
-        "AvailabilityZones" : { "Fn::GetAZs" : "" },
-        "LaunchConfigurationName" : { "Ref" : "LaunchConfig" },
-        "MinSize" : "1",
-        "MaxSize" : "3",
-        "DesiredCapacity" : { "Ref" : "WebServerCapacity" },
-        "LoadBalancerNames" : [ { "Ref" : "ElasticLoadBalancer" } ]
+        "GroupDescription" : "Enable HTTP access on port 80",
+	"VpcId": {"Fn::ImportValue" : {"Fn::Sub" : "VpcId"}},
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        } ],
+        "SecurityGroupEgress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
       }
     },
-
-    "WebServerScaleUpPolicy" : {
-      "Type" : "AWS::AutoScaling::ScalingPolicy",
-      "Properties" : {
-        "AdjustmentType" : "ChangeInCapacity",
-        "AutoScalingGroupName" : { "Ref" : "WebServerGroup" },
-        "Cooldown" : "60",
-        "ScalingAdjustment" : "1"
+    "WebServerGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AvailabilityZones" : [
+	  "us-east-1a","us-east-1b"
+        ],
+        "VPCZoneIdentifier" : [
+          {"Fn::ImportValue" : {"Fn::Sub" : "PrivateSubnetID1a"}},
+          {"Fn::ImportValue" : {"Fn::Sub" : "PrivateSubnetID1b"}}
+        ],
+        "LaunchConfigurationName": {
+          "Ref": "LaunchConfig"
+        },
+        "MinSize": "2",
+        "MaxSize": "3",
+        "DesiredCapacity": {
+          "Ref": "WebServerCapacity"
+        },
+        "LoadBalancerNames": [
+          {
+            "Ref": "ElasticLoadBalancer"
+          }
+        ],
+        "Tags" : [ {
+          "Key" : "Network",
+          "Value" : "Private",
+          "PropagateAtLaunch" : "true"
+        }, {
+          "Key" : "Name",
+          "Value" : "WebServer",
+          "PropagateAtLaunch" : "true"
+        } ]
+      },
+      "CreationPolicy" : {
+        "ResourceSignal" : {
+          "Timeout" : "PT5M",
+          "Count"   : { "Ref" : "WebServerCapacity" }
+        }
+      },
+      "UpdatePolicy": {
+        "AutoScalingRollingUpdate": {
+          "MinInstancesInService": "1",
+          "MaxBatchSize": "1",
+          "PauseTime" : "PT5M",
+          "WaitOnResourceSignals": "true"
+        }
+      },
+      "DependsOn" : "ElasticLoadBalancer"
+    },
+    "WebServerScaleUpPolicy": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AdjustmentType": "ChangeInCapacity",
+        "AutoScalingGroupName": {
+          "Ref": "WebServerGroup"
+        },
+        "Cooldown": "60",
+        "ScalingAdjustment": "1"
       }
     },
-
-    "WebServerScaleDownPolicy" : {
-      "Type" : "AWS::AutoScaling::ScalingPolicy",
-      "Properties" : {
-        "AdjustmentType" : "ChangeInCapacity",
-        "AutoScalingGroupName" : { "Ref" : "WebServerGroup" },
-        "Cooldown" : "60",
-        "ScalingAdjustment" : "-1"
+    "WebServerScaleDownPolicy": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AdjustmentType": "ChangeInCapacity",
+        "AutoScalingGroupName": {
+          "Ref": "WebServerGroup"
+        },
+        "Cooldown": "60",
+        "ScalingAdjustment": "-1"
       }
     },
-
     "CPUAlarmHigh": {
-     "Type": "AWS::CloudWatch::Alarm",
-     "Properties": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
         "AlarmDescription": "Scale-up if CPU > 90% for 10 minutes",
         "MetricName": "CPUUtilization",
         "Namespace": "AWS/EC2",
@@ -99,20 +181,25 @@
         "Period": "300",
         "EvaluationPeriods": "2",
         "Threshold": "90",
-        "AlarmActions": [ { "Ref": "WebServerScaleUpPolicy" } ],
+        "AlarmActions": [
+          {
+            "Ref": "WebServerScaleUpPolicy"
+          }
+        ],
         "Dimensions": [
           {
             "Name": "AutoScalingGroupName",
-            "Value": { "Ref": "WebServerGroup" }
+            "Value": {
+              "Ref": "WebServerGroup"
+            }
           }
         ],
         "ComparisonOperator": "GreaterThanThreshold"
       }
     },
-
     "CPUAlarmLow": {
-     "Type": "AWS::CloudWatch::Alarm",
-     "Properties": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
         "AlarmDescription": "Scale-down if CPU < 70% for 10 minutes",
         "MetricName": "CPUUtilization",
         "Namespace": "AWS/EC2",
@@ -120,180 +207,327 @@
         "Period": "300",
         "EvaluationPeriods": "2",
         "Threshold": "70",
-        "AlarmActions": [ { "Ref": "WebServerScaleDownPolicy" } ],
+        "AlarmActions": [
+          {
+            "Ref": "WebServerScaleDownPolicy"
+          }
+        ],
         "Dimensions": [
           {
             "Name": "AutoScalingGroupName",
-            "Value": { "Ref": "WebServerGroup" }
+            "Value": {
+              "Ref": "WebServerGroup"
+            }
           }
         ],
         "ComparisonOperator": "LessThanThreshold"
       }
     },
-  "LaunchConfig": {
-      "Type" : "AWS::AutoScaling::LaunchConfiguration",
-      "Metadata" : {
-        "Comment1" : "Configure the bootstrap helpers to install the Apache Web Server and PHP",
-        "Comment2" : "The website content is downloaded from the CloudFormationPHPSample.zip file",
-
-        "AWS::CloudFormation::Init" : {
-          "config" : {
-              "yum" : {
-                "httpd"            : [],
-                "php"              : [],
-                "php-mysql"        : [],
-                "php-gd"    	   : [],
-                "php-pear"         : [],
-                "mysql57"          : [],
-                "MySQL-python27"   : []
+    "LaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Metadata": {
+        "AWS::CloudFormation::Init": {
+          "config": {
+            "yum": {
+              "httpd": [],
+              "php": [],
+              "php-mysql": [],
+              "php-gd": [],
+              "php-pear": [],
+              "mysql57": [],
+              "MySQL-python27": []
+            }
+          },
+          "sources": {
+            "/usr/local/src/": "https://github.com/oceanosis/mybb/blob/master/mybb_ready.tar.gz"
+          },
+          "files": {
+            "/usr/local/src/mybb_dump.sql": {
+              "source": "https://github.com/oceanosis/mybb/blob/master/mybb_dump.sql",
+              "mode": "000644",
+              "owner": "root",
+              "group": "root"
+            },
+            "/etc/cfn/cfn-hup.conf": {
+              "content": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "[main]\n",
+                    "stack=",
+                    {
+                      "Ref": "AWS::StackId"
+                    },
+                    "\n",
+                    "region=",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "\n"
+                  ]
+                ]
+              },
+              "mode": "000400",
+              "owner": "root",
+              "group": "root"
+            },
+            "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
+              "content": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "[cfn-auto-reloader-hook]\n",
+                    "triggers=post.update\n",
+                    "path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init\n",
+                    "action=/opt/aws/bin/cfn-init -v ",
+                    "         --stack ",
+                    {
+                      "Ref": "AWS::StackName"
+                    },
+                    "         --resource LaunchConfig ",
+                    "         --region ",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "\n",
+                    "runas=root\n"
+                  ]
+                ]
+              }
+            }
+          },
+          "commands": {
+            "00) Unpack 'mybb-ready.tar.gz' file into its application directory": {
+              "command": "tar xf /usr/local/src/mybb-www.tar.gz -C /var/www/html --strip 1"
+            },
+            "01) Set 'apache' user and group as mybb directory owners": {
+              "command": "chown -R apache.apache /var/www/html"
+            },
+            "02) Fill DATABASE occurences from 'config.php' file": {
+              "command": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "sed -i -e 's/DATABASE/",
+                    {
+                      "Ref": "DBName"
+                    },
+                    "/g' /var/www/html/inc/config.php"
+                  ]
+                ]
               }
             },
-
-            "sources" : {
-              "/usr/local/src/" : "https://s3.amazonaws.com/mybb-automation-dumlu/mybb_ready.tar.gz",
-              "/usr/local/src/" : "https://s3.amazonaws.com/mybb-automation-dumlu/mybb_dump.sql"
-            },
-	    "files" : {
-
-              "/etc/cfn/cfn-hup.conf" : {
-                "content" : { "Fn::Join" : [ "", [
-                  "[main]\n",
-                  "stack=", { "Ref" : "AWS::StackId" }, "\n",
-                  "region=", { "Ref" : "AWS::Region" }, "\n"
-                ]]},
-                "mode"    : "000400",
-                "owner"   : "root",
-                "group"   : "root"
-              },
-
-              "/etc/cfn/hooks.d/cfn-auto-reloader.conf" : {
-                "content": { "Fn::Join" : [ "", [
-                  "[cfn-auto-reloader-hook]\n",
-                  "triggers=post.update\n",
-                  "path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init\n",
-                  "action=/opt/aws/bin/cfn-init -v ",
-                  "         --stack ", { "Ref" : "AWS::StackName" },
-                  "         --resource LaunchConfig ",
-                  "         --region ", { "Ref" : "AWS::Region" }, "\n",
-                  "runas=root\n"
-                ]]}
+            "03) Fill HOSTNAME occurences into 'config.php'": {
+              "command": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "sed -i -e 's/HOSTNAME/",
+                    {
+                      "Fn::ImportValue": {
+                        "Fn::Sub": "Endpoint"
+                      }
+                    },
+                    "/g' /var/www/html/inc/config.php"
+                  ]
+                ]
               }
             },
-	    "commands" : {
-	      "00) Unpack 'mybb-ready.tar.gz' file into its application directory" : {
-                "command" : "tar xf /usr/local/src/mybb-www.tar.gz -C /var/www/html --strip 1"
-              },
-
-              "01) Set 'apache' user and group as mybb directory owners" : {
-                "command" : "chown -R apache.apache /var/www/html"
-              },
-
-              "02) Fill DATABASE occurences from 'config.php' file" : {
-                "command" : { "Fn::Join" : [ "", [
-                  "sed -i -e 's/DATABASE/", { "Ref": "DBName" }, "/g' /var/www/html/inc/config.php"
-                ]]}
-              },
-
-              "03) Fill HOSTNAME occurences into 'config.php'" : {
-                "command" : { "Fn::Join" : [ "", [
-                  "sed -i -e 's/HOSTNAME/", {"Fn::ImportValue" : {"Fn::Sub" : "RDSEndpoint"}}, "/g' /var/www/html/inc/config.php"
-                ]]}
-              },
-
-              "04) Fill USERNAME occurences into 'config.php'" : {
-                "command" : { "Fn::Join" : [ "", [
-                  "sed -i -e 's/USERNAME/", { "Ref": "DBUser" }, "/g' /var/www/html/inc/config.php"
-                ]]}
-              },
-
-              "05) Fill PASSWORD occurences into 'config.php'" : {
-                "command" : { "Fn::Join" : [ "", [
-                  "sed -i -e 's/PASSWORD/", { "Ref": "DBPassword" }, "/g' /var/www/html/inc/config.php"
-                ]]}
-              },
-
-              "06) Fill URL occurences into 'settings.php'" : {
-                "command" : { "Fn::Join" : [ "", [
-                  "sed -i -e 's/URL/", { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ]}, "/g' /var/www/html/inc/settings.php"
-                ]]}
-              },
-
-              "07) Restore mybb-dump.sql if database is empty" : {
-                "command" : { "Fn::Join" : [ "", [
-                  "count=$(mysql",
-                  " -h", { "Fn::GetAtt": [ "MySQLDatabase", "Endpoint.Address" ] },
-                  " -u", { "Ref": "DBUser" },
-                  " -p", { "Ref": "DBPassword" },
-                  " -e 'SELECT COUNT(DISTINCT table_name) FROM information_schema.columns WHERE table_schema = \"", { "Ref": "DBName" }, "\";'",
-                  " | awk '{print $1}' | tail -1);",
-                  " if [ ${count} -eq 0 ]; then",
-                  " cp /usr/local/src/mybb-dump.sql /tmp;",
-                  " sed -i 's/ENDPOINT_URL/", { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ]}, "/g' /tmp/mybb-dump.sql;",
-                  " mysql",
-                  " -h", {"Fn::ImportValue" : {"Fn::Sub" : "RDSEndpoint"}},
-                  " -u", { "Ref": "DBUser" },
-                  " -p", { "Ref": "DBPassword" },
-                  " ", { "Ref": "DBName" },
-                  " < /usr/local/src/mybb-dump.sql;",
-                  " rm /usr/local/src/mybb-dump.sql;",
-                  " fi"
-                ]]}
-              },
-
-              "08) Restart the Apache daemon" : {
-                "command" : "service httpd restart"
+            "04) Fill USERNAME occurences into 'config.php'": {
+              "command": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "sed -i -e 's/USERNAME/",
+                    {
+                      "Ref": "DBUser"
+                    },
+                    "/g' /var/www/html/inc/config.php"
+                  ]
+                ]
               }
             },
-            "services" : {
-              "sysvinit" : {
-                "httpd" : {
-                  "enabled" : "true",
-                  "ensureRunning" : "true"
-                },
-		"cfn-hup" : {
-                  "enabled" : "true",
-                  "ensureRunning" : "true",
-                  "files" : [ "/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf" ]
-                }
+            "05) Fill PASSWORD occurences into 'config.php'": {
+              "command": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "sed -i -e 's/PASSWORD/",
+                    {
+                      "Ref": "DBPassword"
+                    },
+                    "/g' /var/www/html/inc/config.php"
+                  ]
+                ]
+              }
+            },
+            "06) Fill URL occurences into 'settings.php'": {
+              "command": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "sed -i -e 's/URL/",
+                    {
+                      "Fn::GetAtt": [
+                        "ElasticLoadBalancer",
+                        "DNSName"
+                      ]
+                    },
+                    "/g' /var/www/html/inc/settings.php"
+                  ]
+                ]
+              }
+            },
+            "07) Restore mybb-dump.sql if database is empty": {
+              "command": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "count=$(mysql",
+                    " -h",
+		    {
+                      "Fn::ImportValue": {
+                        "Fn::Sub": "Endpoint"
+                      }
+                    },
+                    " -u",
+                    {
+                      "Ref": "DBUser"
+                    },
+                    " -p",
+                    {
+                      "Ref": "DBPassword"
+                    },
+                    " -e 'SELECT COUNT(DISTINCT table_name) FROM information_schema.columns WHERE table_schema = \"",
+                    {
+                      "Ref": "DBName"
+                    },
+                    "\";'",
+                    " | awk '{print $1}' | tail -1);",
+                    " if [ ${count} -eq 0 ]; then",
+                    " cp /usr/local/src/mybb-dump.sql /tmp;",
+                    " sed -i 's/ENDPOINT_URL/",
+                    {
+                      "Fn::GetAtt": [
+                        "ElasticLoadBalancer",
+                        "DNSName"
+                      ]
+                    },
+                    "/g' /tmp/mybb-dump.sql;",
+                    " mysql",
+                    " -h",
+                    {
+                      "Fn::ImportValue": {
+                        "Fn::Sub": "Endpoint"
+                      }
+                    },
+                    " -u",
+                    {
+                      "Ref": "DBUser"
+                    },
+                    " -p",
+                    {
+                      "Ref": "DBPassword"
+                    },
+                    " ",
+                    {
+                      "Ref": "DBName"
+                    },
+                    " < /usr/local/src/mybb-dump.sql;",
+                    " rm /usr/local/src/mybb-dump.sql;",
+                    " fi"
+                  ]
+                ]
+              }
+            },
+            "08) Restart the Apache daemon": {
+              "command": "service httpd restart"
+            }
+          },
+          "services": {
+            "sysvinit": {
+              "httpd": {
+                "enabled": "true",
+                "ensureRunning": "true"
+              },
+              "cfn-hup": {
+                "enabled": "true",
+                "ensureRunning": "true",
+                "files": [
+                  "/etc/cfn/cfn-hup.conf",
+                  "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
+                ]
               }
             }
           }
         }
       },
-
       "Properties": {
-        "AssociatePublicIpAddress" : "true",
-        "ImageId" : "ami-6057e21a",
-        "InstanceType" : { "Ref" : "InstanceType" },
-        "SecurityGroups" : [ {"Ref" : "PrivateSecurityGroup"} ],
-        "KeyName" : { "Ref" : "KeyName" },
-        "UserData" : { "Fn::Base64" : { "Fn::Join" : [ "", [
-             "#!/bin/bash -xe\n",
-             "yum update -y aws-cfn-bootstrap\n",
-
-             "# Install the files and packages from the metadata\n",
-             "/opt/aws/bin/cfn-init -v ",
-             "         --stack ", { "Ref" : "AWS::StackName" },
-             "         --resource LaunchConfig ",
-             "         --region ", { "Ref" : "AWS::Region" }, "\n",
-
-             "# Signal the status from cfn-init\n",
-             "/opt/aws/bin/cfn-signal -e $? ",
-             "         --stack ", { "Ref" : "AWS::StackName" },
-             "         --resource WebServerAutoScalingGroup ",
-             "         --region ", { "Ref" : "AWS::Region" }, "\n"
-        ]]}}
+        "ImageId": "ami-6057e21a",
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "SecurityGroups": [
+	  {"Fn::ImportValue" : {"Fn::Sub" : "PrivateSGID"}}
+        ],
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#!/bin/bash -xe\n",
+                "yum update -y aws-cfn-bootstrap\n",
+                "# Install the files and packages from the metadata\n",
+                "/opt/aws/bin/cfn-init -v ",
+                "         --stack ",
+                {
+                  "Ref": "AWS::StackName"
+                },
+                "         --resource LaunchConfig ",
+                "         --region ",
+                {
+                  "Ref": "AWS::Region"
+                },
+                "\n",
+                "# Signal the status from cfn-init\n",
+                "/opt/aws/bin/cfn-signal -e $? ",
+                "         --stack ",
+                {
+                  "Ref": "AWS::StackName"
+                },
+                "         --resource WebServerGroup ",
+                "         --region ",
+                {
+                  "Ref": "AWS::Region"
+                },
+                "\n"
+              ]
+            ]
+          }
+        }
       }
     }
   },
-
-  "Outputs" : {
-    "WebsiteURL" : {
-      "Description" : "ELB URL for newly created myBB stack",
-      "Value" : { "Fn::Join" : [ "", [
-        "http://",
-        { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ] }
-      ]]}
+  "Outputs": {
+    "WebsiteURL": {
+      "Description": "ELB URL for newly created myBB stack",
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "http://",
+            {
+              "Fn::GetAtt": [
+                "ElasticLoadBalancer",
+                "DNSName"
+              ]
+            }
+          ]
+        ]
+      }
     }
   }
 }

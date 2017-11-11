@@ -1,0 +1,74 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "bastion server",
+  "Parameters": {
+    "InstanceType": {
+      "Description": "Type of EC2 instance to launch",
+      "Type": "String",
+      "Default": "t1.micro",
+      "AllowedValues": [
+        "t1.micro"
+      ],
+      "ConstraintDescription": "Must be a valid EC2 instance type"
+    },
+    "KeyName": {
+      "Description": "Key Pair Name",
+      "Type": "String",
+      "Default": "Automation-Test"
+    }
+  },
+  "Resources": {
+    "MyEC2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": "ami-003b7c69",
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+"SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
+"SecurityGroupIds": [{"Fn::ImportValue" : {"Fn::Sub" : "PublicSGID"}}],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#!/bin/bash -xe\n",
+                "yum update -y\n"
+              ]
+            ]
+          }
+        },
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          },
+          {
+            "Key": "Name",
+            "Value": "BastionServer"
+          },
+          {
+            "Key": "Server",
+            "Value": "JumpServer"
+          }
+        ]
+      }
+    }
+},
+    "Outputs": {
+      "BastionDNSURL": {
+        "Description": "URL for bastion server",
+        "Value": {
+                "Fn::GetAtt": [
+                  "MyEC2Instance",
+                  "PublicDnsName"
+                ]
+        }
+      }
+    }
+}

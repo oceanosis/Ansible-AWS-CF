@@ -7,3 +7,4 @@ sec_stack: SecuritySettings
 ec2_stack: WebServers
 auto_stack: AutoScalingSettings
 rds_stack: DBServers
+jump_stack: BastionServer 

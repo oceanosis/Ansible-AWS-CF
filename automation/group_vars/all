@@ -26,3 +26,4 @@ MultiAZDb: true
 rdsdb: mybb
 rdsuser: mybb
 rdspass: ufuk1023
+mondb: zabbixdb

@@ -82,22 +82,22 @@
 - name: Show Bastion stack outputs
   debug: msg="Stack outputs are {{ jump_stack.stack_outputs }}"
 
-#- name: AutoScale-ELB Creation
-#  cloudformation:
-#    stack_name: "{{ auto_stack }}"
-#    state: "present"
-#    region: "{{ region }}"
-#    disable_rollback: true
-#    template: "roles/env/files/autoscale.json"
-#  args:
-#    template_parameters:
-#      DBName: "{{ rdsdb }}"
-#      DBUser: "{{ rdsuser }}"
-#      DBPassword: "{{ rdspass }}"
-#  register: "auto_stack"
-#
-#- name: Show AutoScaling stack outputs
-#  debug: msg="Stack outputs are {{ auto_stack.stack_outputs }}"
+- name: AutoScale-ELB Creation
+  cloudformation:
+    stack_name: "{{ auto_stack }}"
+    state: "present"
+    region: "{{ region }}"
+    disable_rollback: true
+    template: "roles/env/files/autoscale.json"
+  args:
+    template_parameters:
+      DBName: "{{ rdsdb }}"
+      DBUser: "{{ rdsuser }}"
+      DBPassword: "{{ rdspass }}"
+  register: "auto_stack"
+
+- name: Show AutoScaling stack outputs
+  debug: msg="Stack outputs are {{ auto_stack.stack_outputs }}"
 
 
 - name: Zabbix Server Creation
@@ -109,7 +109,7 @@
     template: "roles/env/files/mon.json"
   args:
     template_parameters:
-      DBName: "{{ rdsdb }}"
+      DBName: "{{ mondb }}"
       DBUser: "{{ rdsuser }}"
       DBPassword: "{{ rdspass }}"
   register: "mon_stack"

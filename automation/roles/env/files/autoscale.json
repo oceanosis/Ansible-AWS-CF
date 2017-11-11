@@ -248,29 +248,33 @@
       "Metadata": {
         "Comment1" : "Install the Apache Web Server, PHP and Deploy MyBB",
         "AWS::CloudFormation::Init": {
-          "config": {
-            "yum": {
-              "httpd": [],
-              "php": [],
-              "php-mysql": [],
-              "php-gd": [],
-              "php-pear": [],
-              "mysql57": [],
-              "MySQL-python27": []
-            }
+          "configSets" : {
+            "InstallAndRun" : [ "Install", "Configure" ]
           },
-          "sources": {
-            "/usr/local/src/": "https://github.com/oceanosis/mybb/blob/master/mybb_ready.tar.gz"
-          },
-          "files": {
-            "/usr/local/src/mybb_dump.sql": {
-              "source": "https://github.com/oceanosis/mybb/blob/master/mybb_dump.sql",
-              "mode": "000644",
-              "owner": "root",
-              "group": "root"
+         "Install" : {
+           "packages" : {
+              "yum": {
+                "httpd": [],
+                "php": [],
+                "php-mysql": [],
+                "php-gd": [],
+                "php-pear": [],
+                "mysql57": [],
+                "MySQL-python27": []
+               }
             },
-            "/etc/cfn/cfn-hup.conf": {
-              "content": {
+            "sources": {
+               "/usr/local/src/": "https://github.com/oceanosis/mybb/blob/master/mybb_ready.tar.gz"
+             },
+            "files": {
+              "/usr/local/src/mybb_dump.sql": {
+                "source": "https://github.com/oceanosis/mybb/blob/master/mybb_dump.sql",
+                "mode": "000644",
+                "owner": "root",
+                "group": "root"
+                },
+              "/etc/cfn/cfn-hup.conf": {
+               "content": {
                 "Fn::Join": [
                   "",
                   [
@@ -291,8 +295,8 @@
               "mode": "000400",
               "owner": "root",
               "group": "root"
-            },
-            "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
+             },
+             "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
               "content": {
                 "Fn::Join": [
                   "",
@@ -314,9 +318,9 @@
                     "runas=root\n"
                   ]
                 ]
-              }
-            }
-          },
+               }
+             }
+           },
           "commands": {
             "00) Unpack 'mybb-ready.tar.gz' file into its application directory": {
               "command": "tar xf /usr/local/src/mybb-www.tar.gz -C /var/www/html --strip 1"

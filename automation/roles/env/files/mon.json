@@ -37,6 +37,29 @@
       "Type": "AWS::EC2::Instance",
         "Metadata" : {
         "Comment1" : "Configure the bootstrap helpers to install the Apache Web Server and PHP",
+        "Properties": {
+        "ImageId": "ami-6057e21a",
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+"SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
+"SecurityGroupIds": [{"Fn::ImportValue" : {"Fn::Sub" : "PublicSGID"}}],
+ 	"Tags": [
+          {
+            "Key": "Application",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          },
+          {
+            "Key": "Name",
+            "Value": "MonitoringServer"
+          }
+        ]
+      },
 	  "AWS::CloudFormation::Init" : {
           "configSets" : {
             "InstallAndRun" : [ "Install" , "Configure" ]
@@ -114,21 +137,21 @@
           "Configure" : {
             "commands" : {
               "01_set_mysql_root_password" : {
-                "command" : { "Fn::Join" : ["", ["mysqladmin -u ",{ "Ref" : "DBUsername" }," password '", { "Ref" : "DBPassword" }, "'"]]},
-                "test" : { "Fn::Join" : ["", ["$(mysql ", { "Ref" : "DBUsername" }, " -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"]]}
+                "command" : { "Fn::Join" : ["", ["mysqladmin -u ",{ "Ref" : "DBUser" }," password '", { "Ref" : "DBPassword" }, "'"]]},
+                "test" : { "Fn::Join" : ["", ["$(mysql ", { "Ref" : "DBUser" }, " -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"]]}
               },
               "02_create_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < /tmp/setup.mysql"]]},
-                "test" : { "Fn::Join" : ["", ["$(mysql ", { "Ref" : "DBUsername" }, " -u ",{ "Ref" : "DBUsername" }," --password='", { "Ref" : "DBPassword" }, "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"]]}
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /tmp/setup.mysql"]]},
+                "test" : { "Fn::Join" : ["", ["$(mysql ", { "Ref" : "DBUser" }, " -u ",{ "Ref" : "DBUser" }," --password='", { "Ref" : "DBPassword" }, "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"]]}
               },
 	      "03_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/schema.sql"]]}
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/schema.sql"]]}
 	      },
 	      "04_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < usr/share/doc/zabbix-server-mysql-3.0.0/create/images.sql"]]}
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < usr/share/doc/zabbix-server-mysql-3.0.0/create/images.sql"]]}
 	      },
 	      "05_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUsername" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/data.sql"]]}
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/data.sql"]]}
               },
 	      "06_restart" : {
                 "command" : "service zabbix-server start"
@@ -140,7 +163,7 @@
     }
   },
     "Outputs": {
-      "WebsiteURL": {
+      "ZabbixURL": {
         "Description": "URL for monitoring server",
         "Value": {
           "Fn::Join": [
@@ -149,7 +172,7 @@
               "http://",
               {
                 "Fn::GetAtt": [
-                  "MyEC2Instance",
+                  "MonitoringInstance",
                   "PublicDnsName"
                 ]
               }, "/zabbix"

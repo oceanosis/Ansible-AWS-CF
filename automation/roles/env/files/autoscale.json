@@ -244,7 +244,47 @@
       }
     },
     "LaunchConfig": {
-      "Type": "AWS::AutoScaling::LaunchConfiguration",
+        "Type": "AWS::AutoScaling::LaunchConfiguration",
+        "Properties": {
+            "ImageId": "ami-6057e21a",
+            "InstanceType": {
+              "Ref": "InstanceType"
+            },
+    	      "SecurityGroups" : [ {"Ref" : "WebServerSecurityGroup"} ],
+            "KeyName": {
+              "Ref": "KeyName"
+            },
+            "UserData": {
+              "Fn::Base64": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "#!/bin/bash -xe\n",
+                		"yum -y update\n",
+                		"yum -y install python-pip\n",
+                		"pip install pystache \n",
+                		"pip install argparse\n",
+                		"pip install python-daemon\n",
+                		"pip install requests\n",
+                    "yum install -y aws-apitools-cfn\n",
+                    "yum update -y aws-cfn-bootstrap\n",
+                     
+                    "# Install the files and packages from the metadata\n",
+                     "/opt/aws/bin/cfn-init -v ",
+                     "         --stack ", { "Ref" : "AWS::StackName" },
+                     "         --resource LaunchConfig ",
+                     "         --region ", { "Ref" : "AWS::Region" }, "\n",
+        
+                     "# Signal the status from cfn-init\n",
+                     "/opt/aws/bin/cfn-signal -e $? ",
+                     "         --stack ", { "Ref" : "AWS::StackName" },
+                     "         --resource WebServerGroup ",
+                     "         --region ", { "Ref" : "AWS::Region" }, "\n"
+                  ]
+                ]
+              }
+            }
+        },
       "Metadata": {
         "Comment1" : "Install the Apache Web Server, PHP and Deploy MyBB",
         "AWS::CloudFormation::Init": {
@@ -322,88 +362,13 @@
              }
            },
           "commands": {
-            "00) Unpack 'mybb-ready.tar.gz' file into its application directory": {
+            "01) Unpack 'mybb-ready.tar.gz' file into its application directory": {
               "command": "tar xf /usr/local/src/mybb-www.tar.gz -C /var/www/html --strip 1"
             },
-            "01) Set 'apache' user and group as mybb directory owners": {
+            "02) Set 'apache' user and group as mybb directory owners": {
               "command": "chown -R apache.apache /var/www/html"
             },
-            "02) Fill DATABASE occurences from 'config.php' file": {
-              "command": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "sed -i -e 's/DATABASE/",
-                    {
-                      "Ref": "DBName"
-                    },
-                    "/g' /var/www/html/inc/config.php"
-                  ]
-                ]
-              }
-            },
-            "03) Fill HOSTNAME occurences into 'config.php'": {
-              "command": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "sed -i -e 's/HOSTNAME/",
-                    {
-                      "Fn::ImportValue": {
-                        "Fn::Sub": "Endpoint"
-                      }
-                    },
-                    "/g' /var/www/html/inc/config.php"
-                  ]
-                ]
-              }
-            },
-            "04) Fill USERNAME occurences into 'config.php'": {
-              "command": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "sed -i -e 's/USERNAME/",
-                    {
-                      "Ref": "DBUser"
-                    },
-                    "/g' /var/www/html/inc/config.php"
-                  ]
-                ]
-              }
-            },
-            "05) Fill PASSWORD occurences into 'config.php'": {
-              "command": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "sed -i -e 's/PASSWORD/",
-                    {
-                      "Ref": "DBPassword"
-                    },
-                    "/g' /var/www/html/inc/config.php"
-                  ]
-                ]
-              }
-            },
-            "06) Fill URL occurences into 'settings.php'": {
-              "command": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "sed -i -e 's/URL/",
-                    {
-                      "Fn::GetAtt": [
-                        "ElasticLoadBalancer",
-                        "DNSName"
-                      ]
-                    },
-                    "/g' /var/www/html/inc/settings.php"
-                  ]
-                ]
-              }
-            },
-            "07) Restore mybb-dump.sql if database is empty": {
+            "03) Restore mybb-dump.sql if database is empty": {
               "command": {
                 "Fn::Join": [
                   "",
@@ -464,10 +429,85 @@
                   ]
                 ]
               }
-            },
-            "08) Restart the Apache daemon": {
-              "command": "service httpd restart"
             }
+           }
+          },
+          "Configure" : {
+            
+            "01) Fill DATABASE occurences from 'config.php' file": {
+              "command": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "sed -i -e 's/DATABASE/",
+                    {
+                      "Ref": "DBName"
+                    },
+                    "/g' /var/www/html/inc/config.php"
+                  ]
+                ]
+              }
+            },
+            "02) Fill HOSTNAME occurences into 'config.php'": {
+              "command": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "sed -i -e 's/HOSTNAME/",
+                    {
+                      "Fn::ImportValue": {
+                        "Fn::Sub": "Endpoint"
+                      }
+                    },
+                    "/g' /var/www/html/inc/config.php"
+                  ]
+                ]
+              }
+            },
+            "03) Fill USERNAME occurences into 'config.php'": {
+              "command": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "sed -i -e 's/USERNAME/",
+                    {
+                      "Ref": "DBUser"
+                    },
+                    "/g' /var/www/html/inc/config.php"
+                  ]
+                ]
+              }
+            },
+            "04) Fill PASSWORD occurences into 'config.php'": {
+              "command": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "sed -i -e 's/PASSWORD/",
+                    {
+                      "Ref": "DBPassword"
+                    },
+                    "/g' /var/www/html/inc/config.php"
+                  ]
+                ]
+              }
+            },
+            "05) Fill URL occurences into 'settings.php'": {
+              "command": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "sed -i -e 's/URL/",
+                    {
+                      "Fn::GetAtt": [
+                        "ElasticLoadBalancer",
+                        "DNSName"
+                      ]
+                    },
+                    "/g' /var/www/html/inc/settings.php"
+                  ]
+                ]
+              }
           },
           "services": {
             "sysvinit": {
@@ -486,50 +526,7 @@
             }
           }
         }
-      },
-      "Properties": {
-        "ImageId": "ami-6057e21a",
-        "InstanceType": {
-          "Ref": "InstanceType"
-        },
-	"SecurityGroups" : [ {"Ref" : "WebServerSecurityGroup"} ],
-        "KeyName": {
-          "Ref": "KeyName"
-        },
-        "UserData": {
-          "Fn::Base64": {
-            "Fn::Join": [
-              "",
-              [
-                "#!/bin/bash -xe\n",
-		"yum -y update\n",
-		"yum -y install python-pip\n",
-		"pip install pystache \n",
-		"pip install argparse\n",
-		"pip install python-daemon\n",
-		"pip install requests\n",
-                "yum install -y aws-apitools-cfn\n",
-
-                "# Install the files and packages from the metadata\n",
-             "yum update -y aws-cfn-bootstrap\n",
-
-             "# Install the files and packages from the metadata\n",
-             "/opt/aws/bin/cfn-init -v ",
-             "         --stack ", { "Ref" : "AWS::StackName" },
-             "         --resource LaunchConfig ",
-             "         --region ", { "Ref" : "AWS::Region" }, "\n",
-
-             "# Signal the status from cfn-init\n",
-             "/opt/aws/bin/cfn-signal -e $? ",
-             "         --stack ", { "Ref" : "AWS::StackName" },
-             "         --resource WebServerGroup ",
-             "         --region ", { "Ref" : "AWS::Region" }, "\n",
-              ]
-            ]
-          }
-        }
       }
-    }
   },
   "Outputs": {
     "WebsiteURL": {
@@ -550,4 +547,6 @@
       }
     }
   }
+    }
+}
 }

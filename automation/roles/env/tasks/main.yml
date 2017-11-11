@@ -94,6 +94,8 @@
       DBName: "{{ rdsdb }}"
       DBUser: "{{ rdsuser }}"
       DBPassword: "{{ rdspass }}"
+      AdminEmail: "{{ email }}"
+      #AvailabilityZones: "{{ AZList }}"
   register: "auto_stack"
 
 - name: Show AutoScaling stack outputs

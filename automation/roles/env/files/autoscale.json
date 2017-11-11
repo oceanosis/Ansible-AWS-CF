@@ -31,7 +31,14 @@
       "MaxValue": "3",
       "ConstraintDescription": "must be between 1 and 3 EC2 instances."
     },
-  "DBName" : {
+    "AdminEmail": {
+      "Default": "dumluufuk@gmail.com",
+      "Description": "E-Mail address to notify when any scaling operations are in course.",
+      "Type": "String",
+      "AllowedPattern": "([a-zA-Z0-9_\\-\\.]+)@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.)|(([a-zA-Z0-9\\-]+\\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\\]?)",
+      "ConstraintDescription": "Must be a valid email address."
+    },
+   "DBName" : {
      "Type": "String",
       "Default": "test"
     },
@@ -120,6 +127,15 @@
         } ]
       }
     },
+    "NotificationTopic": {
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "Subscription": [{
+          "Endpoint": { "Ref": "AdminEmail" },
+          "Protocol": "email"
+        }]
+      }
+    },
     "WebServerGroup": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
@@ -143,6 +159,15 @@
             "Ref": "ElasticLoadBalancer"
           }
         ],
+	"NotificationConfigurations" : [{
+          "TopicARN" : { "Ref" : "NotificationTopic" },
+          "NotificationTypes" : [
+            "autoscaling:EC2_INSTANCE_LAUNCH",
+            "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+            "autoscaling:EC2_INSTANCE_TERMINATE",
+            "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+          ]
+        }],
         "Tags" : [ {
           "Key" : "Network",
           "Value" : "Private",
@@ -163,7 +188,7 @@
         "AutoScalingRollingUpdate": {
           "MinInstancesInService": "1",
           "MaxBatchSize": "1",
-          "PauseTime" : "PT5M",
+          "PauseTime" : "PT15M",
           "WaitOnResourceSignals": "true"
         }
       },
@@ -243,6 +268,18 @@
         "ComparisonOperator": "LessThanThreshold"
       }
     },
+    "WaitHandle" : {
+      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    },
+
+    "WaitCondition" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "WebServerGroup",
+      "Properties" : {
+        "Handle" : {"Ref" : "WaitHandle"},
+        "Timeout" : "800"
+      }
+    },
     "LaunchConfig": {
         "Type": "AWS::AutoScaling::LaunchConfiguration",
         "Properties": {
@@ -273,12 +310,12 @@
                      "/opt/aws/bin/cfn-init -v ",
                      "         --stack ", { "Ref" : "AWS::StackName" },
                      "         --resource LaunchConfig ",
+		     "         --configsets InstallAndRun ",
                      "         --region ", { "Ref" : "AWS::Region" }, "\n",
         
                      "# Signal the status from cfn-init\n",
-                     "/opt/aws/bin/cfn-signal -e $? ",
+                     "/opt/aws/bin/cfn-signal -e $? '", { "Ref" : "WaitHandle" }, "'",
                      "         --stack ", { "Ref" : "AWS::StackName" },
-                     "         --resource WebServerGroup ",
                      "         --region ", { "Ref" : "AWS::Region" }, "\n"
                   ]
                 ]
@@ -289,7 +326,7 @@
         "Comment1" : "Install the Apache Web Server, PHP and Deploy MyBB",
         "AWS::CloudFormation::Init": {
           "configSets" : {
-            "InstallAndRun" : [ "Install", "Configure" ]
+            "InstallAndRun" : [ "Install", "Configure" , "MonAgent" ]
           },
          "Install" : {
            "packages" : {
@@ -300,34 +337,19 @@
                 "php-gd": [],
                 "php-pear": [],
                 "mysql57": [],
-                "MySQL-python27": []
+                "MySQL-python27": [],
+                "git": []
                }
             },
-            "sources": {
-               "/usr/local/src/": "https://github.com/oceanosis/mybb/blob/master/mybb_ready.tar.gz"
-             },
             "files": {
-              "/usr/local/src/mybb_dump.sql": {
-                "source": "https://github.com/oceanosis/mybb/blob/master/mybb_dump.sql",
-                "mode": "000644",
-                "owner": "root",
-                "group": "root"
-                },
               "/etc/cfn/cfn-hup.conf": {
                "content": {
                 "Fn::Join": [
                   "",
                   [
                     "[main]\n",
-                    "stack=",
-                    {
-                      "Ref": "AWS::StackId"
-                    },
-                    "\n",
-                    "region=",
-                    {
-                      "Ref": "AWS::Region"
-                    },
+                    "stack=",{ "Ref": "AWS::StackId" }, "\n","region=", {"Ref": "AWS::Region" },
+		    " resource=LaunchConfig configsets=InstallAndRun ",
                     "\n"
                   ]
                 ]
@@ -350,6 +372,7 @@
                       "Ref": "AWS::StackName"
                     },
                     "         --resource LaunchConfig ",
+                    "         --configsets InstallAndRun ",
                     "         --region ",
                     {
                       "Ref": "AWS::Region"
@@ -360,15 +383,18 @@
                 ]
                }
              }
-           },
+	  },
+ 	  "sources" : {
+	  	"/usr/local/src" : "https://github.com/oceanosis/mybb/tarball/master"
+	  },
           "commands": {
-            "01) Unpack 'mybb-ready.tar.gz' file into its application directory": {
-              "command": "tar xf /usr/local/src/mybb-www.tar.gz -C /var/www/html --strip 1"
+            "02) Unpack 'mybb_ready.tar.gz' file into its application directory": {
+              "command": "tar xf /usr/local/src/mybb_ready.tar -C /var/www/html --strip 1"
             },
-            "02) Set 'apache' user and group as mybb directory owners": {
+            "03) Set 'apache' user and group as mybb directory owners": {
               "command": "chown -R apache.apache /var/www/html"
             },
-            "03) Restore mybb-dump.sql if database is empty": {
+            "04) Restore mybb-dump.sql if database is empty": {
               "command": {
                 "Fn::Join": [
                   "",
@@ -380,22 +406,13 @@
                         "Fn::Sub": "Endpoint"
                       }
                     },
-                    " -u",
-                    {
-                      "Ref": "DBUser"
-                    },
-                    " -p",
-                    {
-                      "Ref": "DBPassword"
-                    },
+                    " -u", {"Ref": "DBUser" },
+                    " -p", {"Ref": "DBPassword"                    },
                     " -e 'SELECT COUNT(DISTINCT table_name) FROM information_schema.columns WHERE table_schema = \"",
-                    {
-                      "Ref": "DBName"
-                    },
+                    {"Ref": "DBName"},
                     "\";'",
                     " | awk '{print $1}' | tail -1);",
                     " if [ ${count} -eq 0 ]; then",
-                    " cp /usr/local/src/mybb-dump.sql /tmp;",
                     " sed -i 's/ENDPOINT_URL/",
                     {
                       "Fn::GetAtt": [
@@ -403,7 +420,7 @@
                         "DNSName"
                       ]
                     },
-                    "/g' /tmp/mybb-dump.sql;",
+                    "/g' /usr/local/src/mybb_dump.sql;",
                     " mysql",
                     " -h",
                     {
@@ -423,8 +440,7 @@
                     {
                       "Ref": "DBName"
                     },
-                    " < /usr/local/src/mybb-dump.sql;",
-                    " rm /usr/local/src/mybb-dump.sql;",
+                    " < /usr/local/src/mybb_dump.sql;",
                     " fi"
                   ]
                 ]
@@ -432,9 +448,34 @@
             }
            }
           },
+         "MonAgent" : {
+	   
+	   "commands": {
+            "02) Add Host ": {
+              "command": "yum --enablerepo=epel install zabbix-agent -y"
+		},
+            "03) Add Host ": {
+              "command": "HOST=$(curl http://169.254.169.254/latest/meta-data/local-hostname) && sed -i 's/.*Hostname=.*/Hostname=$HOST/g' /etc/zabbix/zabbix_agentd.conf"
+            },
+            "04) Add Host IP" : {
+              "command": "IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4) && sed -i 's/.*Server=.*/Server=$IP/g' /etc/zabbix/zabbix_agentd.conf"
+            },
+            "05) Start Agent" : {
+              "command": "chkconfig --add zabbix-agent && service zabbix-agent start"
+            }
+           },
+	   "services" : {
+   	    "sysvinit" : {
+             "zabbix-agent" : {
+	      "enabled" : "true",
+	      "ensureRunning" : "true"
+	       }
+	     }
+	    }
+	  },
           "Configure" : {
-            
-            "01) Fill DATABASE occurences from 'config.php' file": {
+            "commands": {
+            "01) Set DATABASE in 'config.php' file": {
               "command": {
                 "Fn::Join": [
                   "",
@@ -448,7 +489,7 @@
                 ]
               }
             },
-            "02) Fill HOSTNAME occurences into 'config.php'": {
+            "02) Set HOSTNAME in 'config.php'": {
               "command": {
                 "Fn::Join": [
                   "",
@@ -464,7 +505,7 @@
                 ]
               }
             },
-            "03) Fill USERNAME occurences into 'config.php'": {
+            "03) Set USERNAME in 'config.php'": {
               "command": {
                 "Fn::Join": [
                   "",
@@ -478,7 +519,7 @@
                 ]
               }
             },
-            "04) Fill PASSWORD occurences into 'config.php'": {
+            "04) Set PASSWORD into 'config.php'": {
               "command": {
                 "Fn::Join": [
                   "",
@@ -492,12 +533,12 @@
                 ]
               }
             },
-            "05) Fill URL occurences into 'settings.php'": {
+            "05) Set ELB URL in 'settings.php'": {
               "command": {
                 "Fn::Join": [
                   "",
                   [
-                    "sed -i -e 's/URL/",
+                    "sed -i -e 's/ENDPOINT_URL/",
                     {
                       "Fn::GetAtt": [
                         "ElasticLoadBalancer",
@@ -508,6 +549,7 @@
                   ]
                 ]
               }
+            }
           },
           "services": {
             "sysvinit": {
@@ -527,10 +569,12 @@
           }
         }
       }
+	}
+	}
   },
   "Outputs": {
-    "WebsiteURL": {
-      "Description": "ELB URL for newly created myBB stack",
+    "ELBSiteURL": {
+      "Description": "ELB URL for myBB Servers",
       "Value": {
         "Fn::Join": [
           "",
@@ -547,6 +591,4 @@
       }
     }
   }
-    }
-}
 }

@@ -34,7 +34,16 @@
     "DBPassword" : {
        "Type": "String",
       "Default": "password"
-    }
+    },
+    "MonUser" : {
+      "Type": "String",
+      "Default": "admin"
+    },
+
+    "MonPassword" : {
+       "Type": "String",
+      "Default": "password"
+    },
   },
   "Resources": {
     "IPAddress" : {
@@ -118,7 +127,7 @@
 	     },
 	    "commands": {
 	              "01" : { "command" : "service httpd start"  },
-	              "02" : { "command" : "yum --enablerepo=epel install zabbix" },
+	              "02" : { "command" : "yum --enablerepo=epel install zabbix -y" },
 	              "03" : { "command" : "yum --enablerepo=epel install zabbix-server-mysql zabbix-web-mysql zabbix-agent zabbix-java-gateway -y"  }
 
              },
@@ -178,22 +187,33 @@
 	},
       "Configure" : {
             "commands" : {
-              "01_set_mysql_root_password" : {
-                "command" : { "Fn::Join" : ["", ["mysqladmin -u ",{ "Ref" : "DBUser" }," password '", { "Ref" : "DBPassword" }, "'"]]},
-                "test" : { "Fn::Join" : ["", ["$(mysql ", { "Ref" : "DBUser" }, " -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"]]}
-              },
               "02_create_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /tmp/setup.mysql"]]},
-                "test" : { "Fn::Join" : ["", ["$(mysql ", { "Ref" : "DBUser" }, " -u ",{ "Ref" : "DBUser" }," --password='", { "Ref" : "DBPassword" }, "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"]]}
+                "command" : { "Fn::Join" : ["", ["mysql -h ", {
+                      "Fn::ImportValue": {
+                        "Fn::Sub": "Endpoint"
+                      }
+                    }, " -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /tmp/setup.mysql"]]}
               },
-	      "03_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/schema.sql"]]}
+	      "03_schema import " : {
+                "command" : { "Fn::Join" : ["", ["mysql -h" , {
+                      "Fn::ImportValue": {
+                        "Fn::Sub": "Endpoint"
+                      }
+                    }," -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "DBName" }," < /usr/share/doc/zabbix-server-mysql-3.0.0/create/schema.sql"]]}
 	      },
-	      "04_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < usr/share/doc/zabbix-server-mysql-3.0.0/create/images.sql"]]}
+	      "04_images import" : {
+                "command" : { "Fn::Join" : ["", ["mysql -h ", {
+                      "Fn::ImportValue": {
+                        "Fn::Sub": "Endpoint"
+                      }
+                    }, " -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "DBName" }," < usr/share/doc/zabbix-server-mysql-3.0.0/create/images.sql"]]}
 	      },
-	      "05_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/data.sql"]]}
+	      "05_data import" : {
+                "command" : { "Fn::Join" : ["", ["mysql -h" , {
+                      "Fn::ImportValue": {
+                        "Fn::Sub": "Endpoint"
+                      }
+                    }," -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "DBName" }," < /usr/share/doc/zabbix-server-mysql-3.0.0/create/data.sql"]]}
               }
             },
           "services": {
@@ -207,15 +227,15 @@
                 "ensureRunning": "true"
               }           
             }
-        },
+        }
+       },
 	"Discovery" : {
             "commands" : {
 		"01_Scan Network and add hosts" : {
-                	"command" : "echo ufuk"
+                	"command" : "THIS COMMAND WILL SCAN NETWORK ACCORDING TO DISCOVERY RULE plus SUBNET"
 	     	}
 	     }
-        }
-
+	}
      }
     }  
    }

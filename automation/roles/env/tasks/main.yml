@@ -115,8 +115,10 @@
     template_parameters:
       ImageId: "{{ freetier }}"
       DBName: "{{ mondb }}"
-      DBUser: "{{ monuser }}"
-      DBPassword: "{{ monpass }}"
+      DBUser: "{{ rdsuser }}"
+      DBPassword: "{{ rdspass }}"
+      MonUser: "{{ monuser }}"
+      MonPassword: "{{ monpass }}"
   register: "mon_stack"
 
 - name: Show monitoring stack outputs

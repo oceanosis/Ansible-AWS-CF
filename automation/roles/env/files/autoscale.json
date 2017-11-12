@@ -441,10 +441,10 @@
               "command": "yum --enablerepo=epel install zabbix-agent -y"
 		},
             "03) Add Host ": {
-              "command": "HOST=$(curl http://169.254.169.254/latest/meta-data/local-hostname) && sed -i 's/.*Hostname=.*/Hostname=$HOST/g' /etc/zabbix/zabbix_agentd.conf"
+              "command": "HOST=$(curl http://169.254.169.254/latest/meta-data/local-hostname) && sed -i 's/.*Hostname=.*/Hostname='$HOST'/g' /etc/zabbix/zabbix_agentd.conf"
             },
             "04) Add Host IP" : {
-              "command": "IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4) && sed -i 's/.*Server=.*/Server=$IP/g' /etc/zabbix/zabbix_agentd.conf"
+              "command": "IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4) && sed -i 's/.*Server=.*/Server='$IP'/g' /etc/zabbix/zabbix_agentd.conf"
             },
             "05) Start Agent" : {
               "command": "chkconfig --add zabbix-agent && service zabbix-agent start"

@@ -8,3 +8,5 @@ mon_stack: MonitoringServer
 auto_stack: WebServers
 rds_stack: DBServers
 jump_stack: BastionServer 
+dyn_stack: DynamoDB
+mgt_stack: ManagementServer

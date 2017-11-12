@@ -1,0 +1,80 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "DynamoDB Table Creation",
+ "Parameters": {
+    "DBTable": {
+      "Description": "DynamoDB Table Name",
+      "Default": "management",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "64",
+      "AllowedPattern" : "[a-zA-Z][a-zA-Z0-9]*",
+      "ConstraintDescription" : "must begin with a letter and contain only alphanumeric characters."
+    }
+ },
+ "Resources" : {
+    "ManagementDynamoDBTable" : {
+      "Type" : "AWS::DynamoDB::Table",
+      "Properties" : {
+        "AttributeDefinitions" : [
+          {
+            "AttributeName" : "ParameterID",
+            "AttributeType" : "S"   
+          },
+          {
+            "AttributeName" : "ParameterName",
+            "AttributeType" : "S"
+          },
+          {
+            "AttributeName" : "ParameterValue",
+            "AttributeType" : "S"
+          }
+
+        ],
+        "KeySchema" : [
+          {
+            "AttributeName" : "ParameterID",
+            "KeyType" : "HASH"
+          },
+          {
+            "AttributeName" : "ParameterName",
+            "KeyType" : "RANGE"
+          }
+        ],
+	 "LocalSecondaryIndexes" :[{
+          "IndexName" : "LSI",
+          "KeySchema" : [
+            {
+              "AttributeName" : "ParameterID",
+              "KeyType" : "HASH"
+            },
+            {
+              "AttributeName" : "ParameterValue",
+              "KeyType" : "RANGE"
+            }
+          ],                           
+          "Projection" : {
+            "NonKeyAttributes" : ["ParameterName"],
+            "ProjectionType" : "INCLUDE"
+          }
+        }],
+        "TableName" : { "Ref": "DBTable" },
+	"ProvisionedThroughput": {
+          "ReadCapacityUnits": 1,
+          "WriteCapacityUnits": 1
+        }
+      } 
+     }
+   },
+  "Outputs": {
+      "DynameDBTable": {
+        "Value": { "Ref" : "DBTable" },
+        "Export": {
+          "Name": { "Ref": "DBTable" }
+         },
+        "Description": "Dyname DB Table Name"
+      }
+   }
+  
+}
+

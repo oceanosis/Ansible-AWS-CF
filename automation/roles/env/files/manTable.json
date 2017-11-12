@@ -1,0 +1,27 @@
+{
+    "management": [
+        {
+
+ "PutRequest": {
+                "Item": {
+                    "ParameterID" : {  "S": "1" },
+                    "ParameterName" : {  "S": "admin" },
+                    "ParameterValue": { "S": "ufuk1023" }
+                    }
+        }
+
+    },
+        {
+
+ "PutRequest": {
+                "Item": {
+                    "ParameterID" : {  "S": "2" },
+                    "ParameterName" : {  "S": "MultiAZ" },
+                    "ParameterValue": { "S": "false" }
+                    }
+        }
+
+    }
+  ]
+}
+   

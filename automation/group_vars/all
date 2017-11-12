@@ -33,3 +33,5 @@ rdspass: ufuk1023
 mondb: zabbixdb
 monuser: zabbix
 monpass: ufuk1023
+
+dyntable: management

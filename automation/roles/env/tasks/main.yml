@@ -104,20 +104,52 @@
 - name: Show AutoScaling stack outputs
   debug: msg="Stack outputs are {{ auto_stack.stack_outputs }}"
 
-- name: Zabbix Server Creation
+#- name: Zabbix Server Creation
+#  cloudformation:
+#    stack_name: "{{ mon_stack }}"
+#    state: "present"
+#    region: "{{ region }}"
+#    disable_rollback: true
+#    template: "roles/env/files/mon.json"
+#  args:
+#    template_parameters:
+#      ImageId: "{{ freetier }}"
+#      DBName: "{{ mondb }}"
+#      DBUser: "{{ monuser }}"
+#      DBPassword: "{{ monpass }}"
+#  register: "mon_stack"
+
+#- name: Show monitoring stack outputs
+#  debug: msg="Stack outputs are {{ mon_stack.stack_outputs }}"
+
+- name: DynamoDB Creation
   cloudformation:
-    stack_name: "{{ mon_stack }}"
+    stack_name: "{{ dyn_stack }}"
     state: "present"
     region: "{{ region }}"
     disable_rollback: true
-    template: "roles/env/files/mon.json"
+    template: "roles/env/files/dyn.json"
+  args:
+    template_parameters:
+      DBTable: "{{ dyntable }}"
+  register: "dyn_stack"
+
+- name: Show DynamoDB stack outputs
+  debug: msg="Stack outputs are {{ dyn_stack.stack_outputs }}"
+
+- name: Management Server Creation
+  cloudformation:
+    stack_name: "{{ mgt_stack }}"
+    state: "present"
+    region: "{{ region }}"
+    disable_rollback: true
+    template: "roles/env/files/mgt.json"
   args:
     template_parameters:
       ImageId: "{{ freetier }}"
-      DBName: "{{ mondb }}"
-      DBUser: "{{ monuser }}"
-      DBPassword: "{{ monpass }}"
-  register: "mon_stack"
+      DBTable: "{{ dyntable }}"
+  register: "mgt_stack"
 
-- name: Show EC2 stack outputs
-  debug: msg="Stack outputs are {{ mon_stack.stack_outputs }}"
+- name: Show management stack outputs
+  debug: msg="Stack outputs are {{ mgt_stack.stack_outputs }}"
+

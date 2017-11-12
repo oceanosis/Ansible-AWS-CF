@@ -5,8 +5,8 @@
  "PutRequest": {
                 "Item": {
                     "ParameterID" : {  "S": "1" },
-                    "ParameterName" : {  "S": "admin" },
-                    "ParameterValue": { "S": "ufuk1023" }
+                    "ParameterName" : {  "S": "email" },
+                    "ParameterValue": { "S": "{{ email }}" }
                     }
         }
 
@@ -16,12 +16,33 @@
  "PutRequest": {
                 "Item": {
                     "ParameterID" : {  "S": "2" },
-                    "ParameterName" : {  "S": "MultiAZ" },
-                    "ParameterValue": { "S": "false" }
+                    "ParameterName" : {  "S": "rdsuser" },
+                    "ParameterValue": { "S": "{{ rdsuser }}" }
+                    }
+        }
+
+    },
+ "PutRequest": {
+                "Item": {
+                    "ParameterID" : {  "S": "3" },
+                    "ParameterName" : {  "S": "rdspass" },
+                    "ParameterValue": { "S": "{{ rdspass }}" }
+                    }
+        }
+
+    },
+        {
+
+ "PutRequest": {
+                "Item": {
+                    "ParameterID" : {  "S": "4" },
+                    "ParameterName" : {  "S": "MultiAZDb" },
+                    "ParameterValue": { "S": "{{ MulitAZDb }}" }
                     }
         }
 
     }
+
   ]
 }
    

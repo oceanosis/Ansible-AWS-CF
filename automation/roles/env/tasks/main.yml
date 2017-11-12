@@ -143,7 +143,7 @@
     state: "present"
     region: "{{ region }}"
     disable_rollback: true
-    template: "roles/env/files/mgt.json"
+    template: "roles/env/files/manage.json"
   args:
     template_parameters:
       ImageId: "{{ freetier }}"

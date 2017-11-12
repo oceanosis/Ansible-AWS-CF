@@ -268,18 +268,6 @@
         "ComparisonOperator": "LessThanThreshold"
       }
     },
-    "WaitHandle" : {
-      "Type" : "AWS::CloudFormation::WaitConditionHandle"
-    },
-
-    "WaitCondition" : {
-      "Type" : "AWS::CloudFormation::WaitCondition",
-      "DependsOn" : "WebServerGroup",
-      "Properties" : {
-        "Handle" : {"Ref" : "WaitHandle"},
-        "Timeout" : "800"
-      }
-    },
     "LaunchConfig": {
         "Type": "AWS::AutoScaling::LaunchConfiguration",
         "Properties": {
@@ -314,8 +302,9 @@
                      "         --region ", { "Ref" : "AWS::Region" }, "\n",
         
                      "# Signal the status from cfn-init\n",
-                     "/opt/aws/bin/cfn-signal -e $? '", { "Ref" : "WaitHandle" }, "'",
+                     "/opt/aws/bin/cfn-signal -e $?",
                      "         --stack ", { "Ref" : "AWS::StackName" },
+                     "         --resource WebServerGroup ",
                      "         --region ", { "Ref" : "AWS::Region" }, "\n"
                   ]
                 ]

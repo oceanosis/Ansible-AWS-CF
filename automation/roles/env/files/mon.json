@@ -11,12 +11,17 @@
       ],
       "ConstraintDescription": "Must be a valid EC2 instance type"
     },
+    "ImageId": {
+	"Description": "AMI of of EC2 instance",
+	"Default": "ami-6057e21a" ,
+	"Type": "String"
+    }, 
     "KeyName": {
       "Description": "Key Pair Name",
       "Type": "String",
       "Default": "Automation-Test"
     },
-  "DBName" : {
+    "DBName" : {
      "Type": "String",
       "Default": "test"
     },
@@ -35,34 +40,60 @@
   "Resources": {
     "MonitoringInstance": {
       "Type": "AWS::EC2::Instance",
+	"Properties": {
+          "KeyName": {  "Ref": "KeyName"     },
+          "ImageId": { "Ref":"ImageId" },
+          "InstanceType": { "Ref": "InstanceType"    },
+          "SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1b"}},
+          "SecurityGroupIds": [{"Fn::ImportValue" : {"Fn::Sub" : "PublicSGID"}}],
+	  "UserData": {
+              "Fn::Base64": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "#!/bin/bash -xe\n",
+                                "yum -y update\n",
+                                "yum -y install python-pip\n",
+                                "pip install pystache \n",
+                                "pip install argparse\n",
+                                "pip install python-daemon\n",
+                                "pip install requests\n",
+                    "yum install -y aws-apitools-cfn\n",
+                    "yum update -y aws-cfn-bootstrap\n",
+
+                    "# Install the files and packages from the metadata\n",
+                     "/opt/aws/bin/cfn-init -v ",
+                     "         --stack ", { "Ref" : "AWS::StackName" },
+                     "         --resource MonitoringInstance ",
+                     "         --configsets InstallAndRun ",
+                     "         --region ", { "Ref" : "AWS::Region" }, "\n",
+
+                     "# Signal the status from cfn-init\n",
+                     "/opt/aws/bin/cfn-signal -e $?",
+                     "         --stack ", { "Ref" : "AWS::StackName" },
+                     "         --resource MonitoringInstance ",
+                     "         --region ", { "Ref" : "AWS::Region" }, "\n"
+                  ]
+                ]
+              }
+            },
+          "Tags": [
+           {
+             "Key": "Application",
+             "Value": {
+             "Ref": "AWS::StackName"
+            	}
+           },   {
+             "Key": "Name",
+               "Value": "MonitoringServer"
+             }
+           ]
+         },
         "Metadata" : {
-        "Comment1" : "Configure the bootstrap helpers to install the Apache Web Server and PHP",
-        "Properties": {
-        "ImageId": "ami-6057e21a",
-        "KeyName": {
-          "Ref": "KeyName"
-        },
-        "InstanceType": {
-          "Ref": "InstanceType"
-        },
-"SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
-"SecurityGroupIds": [{"Fn::ImportValue" : {"Fn::Sub" : "PublicSGID"}}],
- 	"Tags": [
-          {
-            "Key": "Application",
-            "Value": {
-              "Ref": "AWS::StackName"
-            }
-          },
-          {
-            "Key": "Name",
-            "Value": "MonitoringServer"
-          }
-        ]
-      },
+          "Comment1" : "Zabbix - Apache Servers Installation",
 	  "AWS::CloudFormation::Init" : {
           "configSets" : {
-            "InstallAndRun" : [ "Install" , "Configure" ]
+            "InstallAndRun" : [ "Install" , "Configure" , "Discovery" ]
           },
 
           "Install" : {
@@ -92,37 +123,54 @@
             "/tmp/setup.mysql" : {
                 "content" : { "Fn::Join" : ["", [
                   "CREATE DATABASE zabbixdb CHARACTER SET UTF8;\n",
-                  "GRANT ALL ON RIVILEGES on zabbixdb.* to zabbix@", { "Ref" : "DBName" }, " IDENTIFIED BY '",{ "Ref" : "DBPassword" },"';\n",
+                  "GRANT ALL ON RIVILEGES on zabbixdb.* to ",{ "Ref" : "DBUser" },"@", { "Ref" : "DBName" }, " IDENTIFIED BY '",{ "Ref" : "DBPassword" },"';\n",
                   "FLUSH PRIVILEGES;\n"
                   ]]},
                 "mode"  : "000400",
                 "owner" : "root",
                 "group" : "root"
               },
-              "/etc/cfn/cfn-hup.conf" : {
-                "content" : { "Fn::Join" : ["", [
-                  "[main]\n",
-                  "stack=", { "Ref" : "AWS::StackId" }, "\n",
-                  "region=", { "Ref" : "AWS::Region" }, "\n"
-                ]]},
-                "mode"    : "000400",
-                "owner"   : "root",
-                "group"   : "root"
+              "/etc/cfn/cfn-hup.conf": {
+               "content": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "[main]\n",
+                    "stack=",{ "Ref": "AWS::StackId" }, "\n","region=", {"Ref": "AWS::Region" },
+                    " resource=MonitoringInstance configsets=InstallAndRun ",
+                    "\n"
+                  ]
+                ]
               },
-
-              "/etc/cfn/hooks.d/cfn-auto-reloader.conf" : {
-                "content": { "Fn::Join" : ["", [
-                  "[cfn-auto-reloader-hook]\n",
-                  "triggers=post.update\n",
-                  "path=Resources.WebServerInstance.Metadata.AWS::CloudFormation::Init\n",
-                  "action=/opt/aws/bin/cfn-init -v ",
-                  "         --stack ", { "Ref" : "AWS::StackName" },
-                  "         --resource MonitoringInstance ",
-                  "         --configsets InstallAndRun ",
-                  "         --region ", { "Ref" : "AWS::Region" }, "\n",
-                  "runas=root\n"
-                ]]}
-              }
+              "mode": "000400",
+              "owner": "root",
+              "group": "root"
+             },
+             "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
+              "content": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "[cfn-auto-reloader-hook]\n",
+                    "triggers=post.update\n",
+                    "path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init\n",
+                    "action=/opt/aws/bin/cfn-init -v ",
+                    "         --stack ",
+                    {
+                      "Ref": "AWS::StackName"
+                    },
+                    "         --resource MonitoringInstance ",
+                    "         --configsets InstallAndRun ",
+                    "         --region ",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "\n",
+                    "runas=root\n"
+                  ]
+                ]
+               }
+             }
             
             },
 
@@ -152,13 +200,27 @@
 	      },
 	      "05_database" : {
                 "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/data.sql"]]}
+              }
+            },
+          "services": {
+            "sysvinit": {
+              "httpd": {
+                "enabled": "true",
+                "ensureRunning": "true"
               },
-	      "06_restart" : {
-                "command" : "service zabbix-server start"
-	      }
+              "zabbix-server": {
+                "enabled": "true",
+                "ensureRunning": "true"
+              }           
             }
-          }
-
+        },
+	"Discovery" : {
+            "commands" : {
+		"01_Scan Network and add hosts" : {
+                	"command" : "echo ufuk"
+	     	}
+	     }
+        }
      }
     }
   },

@@ -2,6 +2,33 @@
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "Network Security Assignments",
   "Resources": {
+    "PublicSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP access via port 80 to world and limit SSH access to internal",
+        "VpcId": {"Fn::ImportValue" : {"Fn::Sub" : "VpcId"}},
+        "SecurityGroupIngress" : [
+          {
+            "IpProtocol" : "tcp",
+            "FromPort" : "22",
+            "ToPort" : "22",
+            "CidrIp" : "10.0.0.0/16"
+          },
+          {
+	  "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        } ],
+        "SecurityGroupEgress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+
     "PrivateSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -289,6 +316,11 @@
     "Description" : "The security group ID to use for private servers",
     "Value" :  { "Fn::GetAtt" : ["PrivateSecurityGroup", "GroupId"] },
     "Export" : { "Name" : {"Fn::Sub": "PrivateSGID" }}
+  },
+  "PublicSecurityGroup" : {
+    "Description" : "The security group ID to use for public servers such as monitor and management",
+    "Value" :  { "Fn::GetAtt" : ["PublicSecurityGroup", "GroupId"] },
+    "Export" : { "Name" : {"Fn::Sub": "PublicSGID" }}
   }
 
 }

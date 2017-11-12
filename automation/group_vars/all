@@ -10,6 +10,8 @@ ansible_configuration: "0.0.1"
 # System
 ####################################################
 email: dumluufuk@gmail.com
+freetier: "ami-6057e21a"
+bastion: "ami-003b7c69"
 
 ####################################################
 # Web
@@ -22,9 +24,12 @@ httpDir: /var/www/html/
 region: us-east-1
 
 KeyName: Automation-Test
-MultiAZDb: true
+
+MultiAZDb: false
 
 rdsdb: mybb
 rdsuser: mybb
 rdspass: ufuk1023
 mondb: zabbixdb
+monuser: zabbix
+monpass: ufuk1023

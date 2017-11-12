@@ -77,6 +77,9 @@
     region: "{{ region }}"
     disable_rollback: true
     template: "roles/env/files/bastion.json"
+  args:
+    template_parameters:
+      ImageId: "{{ bastion }}"
   register: "jump_stack"
 
 - name: Show Bastion stack outputs
@@ -101,7 +104,6 @@
 - name: Show AutoScaling stack outputs
   debug: msg="Stack outputs are {{ auto_stack.stack_outputs }}"
 
-
 - name: Zabbix Server Creation
   cloudformation:
     stack_name: "{{ mon_stack }}"
@@ -111,9 +113,10 @@
     template: "roles/env/files/mon.json"
   args:
     template_parameters:
+      ImageId: "{{ freetier }}"
       DBName: "{{ mondb }}"
-      DBUser: "{{ rdsuser }}"
-      DBPassword: "{{ rdspass }}"
+      DBUser: "{{ monuser }}"
+      DBPassword: "{{ monpass }}"
   register: "mon_stack"
 
 - name: Show EC2 stack outputs

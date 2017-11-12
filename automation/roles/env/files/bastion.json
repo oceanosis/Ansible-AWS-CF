@@ -11,6 +11,11 @@
       ],
       "ConstraintDescription": "Must be a valid EC2 instance type"
     },
+    "ImageId": {
+        "Description": "AMI of of bastion instance",
+        "Default": "ami-003b7c69" ,
+        "Type": "String"
+    },
     "KeyName": {
       "Description": "Key Pair Name",
       "Type": "String",
@@ -18,16 +23,16 @@
     }
   },
   "Resources": {
-    "PublicSecurityGroup": {
+    "BastionSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
         "GroupName": "Public",
         "GroupDescription": "Public",
         "SecurityGroupIngress" : [ {
-         "IpProtocol" : "tcp",
-         "FromPort" : "22",
-         "ToPort" : "22",
-         "CidrIp" : "0.0.0.0/0"
+           "IpProtocol" : "tcp",
+           "FromPort" : "22",
+           "ToPort" : "22",
+           "CidrIp" : "0.0.0.0/0"
          }
         ],
 	"VpcId": {"Fn::ImportValue" : {"Fn::Sub" : "VpcId"}},
@@ -45,10 +50,12 @@
         ]
       }
     },
-    "MyEC2Instance": {
+    "BastionInstance": {
       "Type": "AWS::EC2::Instance",
       "Properties": {
-        "ImageId": "ami-003b7c69",
+        "ImageId": {
+          "Ref": "ImageId"
+        },
         "KeyName": {
           "Ref": "KeyName"
         },
@@ -56,7 +63,7 @@
           "Ref": "InstanceType"
         },
 	"SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
-	"SecurityGroupIds": [ {"Ref": "PublicSecurityGroup" }],
+	"SecurityGroupIds": [ {"Ref": "BastionSecurityGroup" }],
         "UserData": {
           "Fn::Base64": {
             "Fn::Join": [
@@ -92,7 +99,7 @@
         "Description": "URL for bastion server",
         "Value": {
                 "Fn::GetAtt": [
-                  "MyEC2Instance",
+                  "BastionInstance",
                   "PublicDnsName"
                 ]
         }

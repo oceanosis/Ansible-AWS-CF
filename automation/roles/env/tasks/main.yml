@@ -117,6 +117,7 @@
       DBName: "{{ mondb }}"
       DBUser: "{{ rdsuser }}"
       DBPassword: "{{ rdspass }}"
+      MonDB: "{{ mondb }}"
       MonUser: "{{ monuser }}"
       MonPassword: "{{ monpass }}"
   register: "mon_stack"

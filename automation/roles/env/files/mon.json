@@ -35,6 +35,11 @@
        "Type": "String",
       "Default": "password"
     },
+    "MonDB" : {
+     "Type": "String",
+      "Default": "test"
+    },
+
     "MonUser" : {
       "Type": "String",
       "Default": "admin"
@@ -43,7 +48,7 @@
     "MonPassword" : {
        "Type": "String",
       "Default": "password"
-    },
+    }
   },
   "Resources": {
     "IPAddress" : {
@@ -133,17 +138,6 @@
              },
 	   "files" : {
 
-            "/tmp/setup.mysql" : {
-                "content" : { "Fn::Join" : ["", [
-                  "CREATE DATABASE ",{ "Ref" : "DBName" }," CHARACTER SET UTF8;\n",
-                  "GRANT ALL ON RIVILEGES on ",{ "Ref" : "DBName" },".* to ",{ "Ref" : "DBUser" },"@",{"Fn::ImportValue": {"Fn::Sub": "Endpoint" }}, " IDENTIFIED BY '",{ "Ref" : "DBPassword" },"';\n",
-                  "FLUSH PRIVILEGES;\n"
-                  ]]},
-                "mode"  : "000400",
-                "owner" : "root",
-                "group" : "root"
-              },
-
 	      "/etc/cfn/cfn-hup.conf" : {
                 "content" : { "Fn::Join" : [ "", [
                   "[main]\n",
@@ -187,33 +181,46 @@
 	},
       "Configure" : {
             "commands" : {
-              "02_create_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -h ", {
-                      "Fn::ImportValue": {
-                        "Fn::Sub": "Endpoint"
-                      }
-                    }, " -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /tmp/setup.mysql"]]}
+              "01_create_database" : {
+                "command" : { "Fn::Join" : ["", [
+                       "mysql -h ", { "Fn::ImportValue": {"Fn::Sub": "Endpoint" } },
+                       " -u ",{ "Ref" : "DBUser" },
+                       "  --password='", { "Ref" : "DBPassword" },"'",
+		       " -e 'CREATE DATABASE IF NOT EXISTS ",{ "Ref" : "MonDB" }," CHARACTER SET UTF8;'\n"
+                     ]]}
+              },
+
+              "02_create_user" : {
+                "command" : { "Fn::Join" : ["", [
+                       "mysql -h ", { "Fn::ImportValue": {"Fn::Sub": "Endpoint" } },
+                       " -u ",{ "Ref" : "DBUser" },
+                       "  --password='", { "Ref" : "DBPassword" },"'",
+                       " -e 'GRANT ALL ON RIVILEGES on ",{ "Ref" : "MonDB" },
+			".* to ",{ "Ref" : "MonUser" },"@",{"Fn::ImportValue": {"Fn::Sub": "Endpoint" }},
+			 " IDENTIFIED BY ",{ "Ref" : "MonPassword" },"; FLUSH PRIVILEGES;'\n"
+
+		     ]]}
               },
 	      "03_schema import " : {
                 "command" : { "Fn::Join" : ["", ["mysql -h" , {
                       "Fn::ImportValue": {
                         "Fn::Sub": "Endpoint"
                       }
-                    }," -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "DBName" }," < /usr/share/doc/zabbix-server-mysql-3.0.0/create/schema.sql"]]}
+                    }," -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "MonDB" }," < /usr/share/doc/zabbix-server-mysql-3.0.0/create/schema.sql"]]}
 	      },
 	      "04_images import" : {
                 "command" : { "Fn::Join" : ["", ["mysql -h ", {
                       "Fn::ImportValue": {
                         "Fn::Sub": "Endpoint"
                       }
-                    }, " -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "DBName" }," < usr/share/doc/zabbix-server-mysql-3.0.0/create/images.sql"]]}
+                    }, " -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "MonDB" }," < usr/share/doc/zabbix-server-mysql-3.0.0/create/images.sql"]]}
 	      },
 	      "05_data import" : {
                 "command" : { "Fn::Join" : ["", ["mysql -h" , {
                       "Fn::ImportValue": {
                         "Fn::Sub": "Endpoint"
                       }
-                    }," -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "DBName" }," < /usr/share/doc/zabbix-server-mysql-3.0.0/create/data.sql"]]}
+                    }," -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "MonDB" }," < /usr/share/doc/zabbix-server-mysql-3.0.0/create/data.sql"]]}
               }
             },
           "services": {
@@ -231,9 +238,13 @@
        },
 	"Discovery" : {
             "commands" : {
-		"01_Scan Network and add hosts" : {
+		"01_Discovery Rule Prepare" : {
                 	"command" : "THIS COMMAND WILL SCAN NETWORK ACCORDING TO DISCOVERY RULE plus SUBNET"
-	     	}
+	     	},
+                "02_Scan Network and add hosts to watch group" : {
+                        "command" : "THIS COMMAND WILL SCAN NETWORK ACCORDING TO DISCOVERY RULE plus SUBNET"
+                }
+
 	     }
 	}
      }

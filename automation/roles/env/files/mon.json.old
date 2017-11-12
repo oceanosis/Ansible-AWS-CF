@@ -1,0 +1,247 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Zabbix Monitoring Server Creation",
+  "Parameters": {
+    "InstanceType": {
+      "Description": "Type of EC2 instance to launch",
+      "Type": "String",
+      "Default": "t2.micro",
+      "AllowedValues": [
+        "t2.micro"
+      ],
+      "ConstraintDescription": "Must be a valid EC2 instance type"
+    },
+    "ImageId": {
+	"Description": "AMI of of EC2 instance",
+	"Default": "ami-6057e21a" ,
+	"Type": "String"
+    }, 
+    "KeyName": {
+      "Description": "Key Pair Name",
+      "Type": "String",
+      "Default": "Automation-Test"
+    },
+    "DBName" : {
+     "Type": "String",
+      "Default": "test"
+    },
+
+    "DBUser" : {
+      "Type": "String",
+      "Default": "admin"
+    },
+
+    "DBPassword" : {
+       "Type": "String",
+      "Default": "password"
+    }
+
+  },
+  "Resources": {
+    "WaitHandle" : {
+      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    },
+
+    "WaitCondition" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "MonitoringInstance",
+      "Properties" : {
+        "Handle" : {"Ref" : "WaitHandle"},
+        "Timeout" : "200"
+      }
+    },
+    "MonitoringInstance": {
+      "Type": "AWS::EC2::Instance",
+	"Properties": {
+          "KeyName": {  "Ref": "KeyName"     },
+          "ImageId": { "Ref":"ImageId" },
+          "InstanceType": { "Ref": "InstanceType"    },
+          "SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1b"}},
+          "SecurityGroupIds": [{"Fn::ImportValue" : {"Fn::Sub" : "PublicSGID"}}],
+	  "UserData": {
+              "Fn::Base64": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "#!/bin/bash -xe\n",
+                    "yum -y update\n",
+                    "yum install -y aws-apitools-cfn\n",
+                    "yum update -y aws-cfn-bootstrap\n",
+
+        	  "/opt/aws/bin/cfn-init -s ", { "Ref" : "AWS::StackId" }, " -r MonitoringInstance ",
+        	  "         --region ", { "Ref" : "AWS::Region" }, "\n",
+
+	          "/opt/aws/bin/cfn-signal -e $? '", { "Ref" : "WaitHandle" }, "'\n"
+
+                  ]
+                ]
+              }
+            },
+          "Tags": [
+           {
+             "Key": "Application",
+             "Value": {
+             "Ref": "AWS::StackName"
+            	}
+           },   {
+             "Key": "Name",
+               "Value": "MonitoringServer"
+             }
+           ]
+         },
+        "Metadata" : {
+          "Comment1" : "Zabbix - Apache Servers Installation",
+	  "AWS::CloudFormation::Init" : {
+          "configSets" : {
+            "InstallAndRun" : [ "Install" , "Configure" , "Discovery" ]
+          },
+
+          "Install" : {
+            "packages" : {
+              "yum" : {
+                "mysql"        : [],
+                "mysql-libs"   : [],
+                "httpd"        : [],
+                "php"          : [],
+                "php-mysql"    : [],
+                "epel-release"          : [],
+                "httpd-devel"          : [],
+                "php-cli"          : [],
+                "php-pear"          : [],
+                "php-gd"          : [],
+                "php-mbstring"          : [],
+                "php-xml"          : []
+              }
+	     },
+	    "commands": {
+	              "01" : { "command" : "service httpd start"  },
+	              "02" : { "command" : "yum --enablerepo=epel install zabbix" },
+	              "03" : { "command" : "yum --enablerepo=epel install zabbix-server-mysql zabbix-web-mysql zabbix-agent zabbix-java-gateway -y"  }
+
+             },
+
+            "/tmp/setup.mysql" : {
+                "content" : { "Fn::Join" : ["", [
+                  "CREATE DATABASE ",{ "Ref" : "DBName" }," CHARACTER SET UTF8;\n",
+                  "GRANT ALL ON RIVILEGES on ",{ "Ref" : "DBName" },".* to ",{ "Ref" : "DBUser" },"@",{"Fn::ImportValue": {"Fn::Sub": "Endpoint" }}, " IDENTIFIED BY '",{ "Ref" : "DBPassword" },"';\n",
+                  "FLUSH PRIVILEGES;\n"
+                  ]]},
+                "mode"  : "000400",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/etc/cfn/cfn-hup.conf": {
+               "content": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "[main]\n",
+                    "stack=",{ "Ref": "AWS::StackId" }, "\n","region=", {"Ref": "AWS::Region" },
+                    " resource=MonitoringInstance configsets=InstallAndRun ",
+                    "\n"
+                  ]
+                ]
+              },
+              "mode": "000400",
+              "owner": "root",
+              "group": "root"
+             },
+             "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
+              "content": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "[cfn-auto-reloader-hook]\n",
+                    "triggers=post.update\n",
+                    "path=Resources.MonitoringInstance.Metadata.AWS::CloudFormation::Init\n",
+                    "action=/opt/aws/bin/cfn-init -v ",
+                    "         --stack ",
+                    {
+                      "Ref": "AWS::StackName"
+                    },
+                    "         -r MonitoringInstance ",
+                    "         --configsets InstallAndRun ",
+                    "         --region ",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "\n",
+                    "runas=root\n"
+                  ]
+                ]
+               }
+             }
+            
+            },
+
+            "services" : {
+              "sysvinit" : {  
+                "httpd"   : { "enabled" : "true", "ensureRunning" : "true" },
+                "cfn-hup" : { "enabled" : "true", "ensureRunning" : "true",
+                              "files" : ["/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf"]}
+              }
+            } 
+          },
+          "Configure" : {
+            "commands" : {
+              "01_set_mysql_root_password" : {
+                "command" : { "Fn::Join" : ["", ["mysqladmin -u ",{ "Ref" : "DBUser" }," password '", { "Ref" : "DBPassword" }, "'"]]},
+                "test" : { "Fn::Join" : ["", ["$(mysql ", { "Ref" : "DBUser" }, " -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"]]}
+              },
+              "02_create_database" : {
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /tmp/setup.mysql"]]},
+                "test" : { "Fn::Join" : ["", ["$(mysql ", { "Ref" : "DBUser" }, " -u ",{ "Ref" : "DBUser" }," --password='", { "Ref" : "DBPassword" }, "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"]]}
+              },
+	      "03_database" : {
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/schema.sql"]]}
+	      },
+	      "04_database" : {
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < usr/share/doc/zabbix-server-mysql-3.0.0/create/images.sql"]]}
+	      },
+	      "05_database" : {
+                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/data.sql"]]}
+              }
+            },
+          "services": {
+            "sysvinit": {
+              "httpd": {
+                "enabled": "true",
+                "ensureRunning": "true"
+              },
+              "zabbix-server": {
+                "enabled": "true",
+                "ensureRunning": "true"
+              }           
+            }
+        },
+	"Discovery" : {
+            "commands" : {
+		"01_Scan Network and add hosts" : {
+                	"command" : "echo ufuk"
+	     	}
+	     }
+        }
+     }
+    }  
+   }
+  },
+    "Outputs": {
+      "ZabbixURL": {
+        "Description": "URL for monitoring server",
+        "Value": {
+          "Fn::Join": [
+            "",
+            [
+              "http://",
+              {
+                "Fn::GetAtt": [
+                  "MonitoringInstance",
+                  "PublicDnsName"
+                ]
+              }, "/zabbix"
+            ]
+          ]
+        }
+    }
+  }
+}

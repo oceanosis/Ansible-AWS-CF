@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Zabbix Monitoring Server Creation",
+  "Description": "Monitoring Server Creation",
   "Parameters": {
     "InstanceType": {
       "Description": "Type of EC2 instance to launch",
@@ -21,33 +21,21 @@
       "Type": "String",
       "Default": "Automation-Test"
     },
-    "DBName" : {
+    "DBTable" : {
      "Type": "String",
-      "Default": "test"
-    },
-
-    "DBUser" : {
-      "Type": "String",
-      "Default": "admin"
-    },
-
-    "DBPassword" : {
-       "Type": "String",
-      "Default": "password"
+      "Default": "management"
     }
-
   },
   "Resources": {
-    "WaitHandle" : {
-      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    "IPAddress" : {
+      "Type" : "AWS::EC2::EIP"
     },
 
-    "WaitCondition" : {
-      "Type" : "AWS::CloudFormation::WaitCondition",
-      "DependsOn" : "MonitoringInstance",
+    "IPAssoc" : {
+      "Type" : "AWS::EC2::EIPAssociation",
       "Properties" : {
-        "Handle" : {"Ref" : "WaitHandle"},
-        "Timeout" : "200"
+        "InstanceId" : { "Ref" : "MonitoringInstance" },
+        "EIP" : { "Ref" : "IPAddress" }
       }
     },
     "MonitoringInstance": {
@@ -56,27 +44,27 @@
           "KeyName": {  "Ref": "KeyName"     },
           "ImageId": { "Ref":"ImageId" },
           "InstanceType": { "Ref": "InstanceType"    },
-          "SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1b"}},
+          "SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
           "SecurityGroupIds": [{"Fn::ImportValue" : {"Fn::Sub" : "PublicSGID"}}],
-	  "UserData": {
-              "Fn::Base64": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "#!/bin/bash -xe\n",
-                    "yum -y update\n",
-                    "yum install -y aws-apitools-cfn\n",
-                    "yum update -y aws-cfn-bootstrap\n",
+          "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
+             "#!/bin/bash -xe\n",
+	     "yum update -y\n",
+             "yum update -y aws-cfn-bootstrap\n",
+             "# InstallAndRun the files and packages from the metadata\n",
 
-        	  "/opt/aws/bin/cfn-init -s ", { "Ref" : "AWS::StackId" }, " -r MonitoringInstance ",
-        	  "         --region ", { "Ref" : "AWS::Region" }, "\n",
+             "# Install the files and packages from the metadata\n",
+             "/opt/aws/bin/cfn-init ",
+             "         --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource MonitoringInstance ",
+             "         --configsets InstallAndRun ",
+             "         --region ", { "Ref" : "AWS::Region" }, "\n",
 
-	          "/opt/aws/bin/cfn-signal -e $? '", { "Ref" : "WaitHandle" }, "'\n"
-
-                  ]
-                ]
-              }
-            },
+             "# Signal the status from cfn-init\n",
+             "/opt/aws/bin/cfn-signal -e $? ",
+             "         --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource MonitoringInstance ",
+             "         --region ", { "Ref" : "AWS::Region" }, "\n"
+		]]}},
           "Tags": [
            {
              "Key": "Application",
@@ -89,145 +77,130 @@
              }
            ]
          },
+       "CreationPolicy" : {
+        "ResourceSignal" : {
+          "Timeout" : "PT5M"
+        }
+       },
         "Metadata" : {
-          "Comment1" : "Zabbix - Apache Servers Installation",
+          "Comment1" : "Monitoring index.php - Apache Servers InstallAndRunation",
 	  "AWS::CloudFormation::Init" : {
           "configSets" : {
-            "InstallAndRun" : [ "Install" , "Configure" , "Discovery" ]
+            "InstallAndRun" : [ "Install" ]
           },
 
           "Install" : {
             "packages" : {
               "yum" : {
-                "mysql"        : [],
-                "mysql-libs"   : [],
                 "httpd"        : [],
-                "php"          : [],
-                "php-mysql"    : [],
-                "epel-release"          : [],
-                "httpd-devel"          : [],
-                "php-cli"          : [],
-                "php-pear"          : [],
-                "php-gd"          : [],
-                "php-mbstring"          : [],
-                "php-xml"          : []
+                "php"          : []
               }
 	     },
-	    "commands": {
-	              "01" : { "command" : "service httpd start"  },
-	              "02" : { "command" : "yum --enablerepo=epel install zabbix" },
-	              "03" : { "command" : "yum --enablerepo=epel install zabbix-server-mysql zabbix-web-mysql zabbix-agent zabbix-java-gateway -y"  }
-
-             },
-
-            "/tmp/setup.mysql" : {
-                "content" : { "Fn::Join" : ["", [
-                  "CREATE DATABASE ",{ "Ref" : "DBName" }," CHARACTER SET UTF8;\n",
-                  "GRANT ALL ON RIVILEGES on ",{ "Ref" : "DBName" },".* to ",{ "Ref" : "DBUser" },"@",{"Fn::ImportValue": {"Fn::Sub": "Endpoint" }}, " IDENTIFIED BY '",{ "Ref" : "DBPassword" },"';\n",
-                  "FLUSH PRIVILEGES;\n"
-                  ]]},
+	    "files" : {
+	      "/etc/cfn/cfn-hup.conf" : {
+                "content" : { "Fn::Join" : [ "", [
+                  "[main]\n",
+                  "stack=", { "Ref" : "AWS::StackId" }, "\n",
+                  "region=", { "Ref" : "AWS::Region" }, "\n"
+                ]]},
+                "mode"    : "000400",
+                "owner"   : "root",
+                "group"   : "root"
+              },	
+              "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
+                "content": { "Fn::Join": [ "", [
+                  "[cfn-auto-reloader-hook]\n",
+                  "triggers=post.update\n",
+                  "path=Resources.MonitoringInstance.Metadata.AWS::CloudFormation::Init\n",
+                  "action=/opt/aws/bin/cfn-init -v ",
+                          "         --stack ", { "Ref" : "AWS::StackName" },
+                          "         --resource MonitoringInstance ",
+                          "         --configsets InstallAndRun ",
+                          "         --region ", { "Ref" : "AWS::Region" }, "\n",
+                  "runas=root\n"
+                ]]},          
                 "mode"  : "000400",
                 "owner" : "root",
                 "group" : "root"
               },
-              "/etc/cfn/cfn-hup.conf": {
-               "content": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "[main]\n",
-                    "stack=",{ "Ref": "AWS::StackId" }, "\n","region=", {"Ref": "AWS::Region" },
-                    " resource=MonitoringInstance configsets=InstallAndRun ",
-                    "\n"
-                  ]
-                ]
-              },
-              "mode": "000400",
-              "owner": "root",
-              "group": "root"
-             },
-             "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
-              "content": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "[cfn-auto-reloader-hook]\n",
-                    "triggers=post.update\n",
-                    "path=Resources.MonitoringInstance.Metadata.AWS::CloudFormation::Init\n",
-                    "action=/opt/aws/bin/cfn-init -v ",
-                    "         --stack ",
-                    {
-                      "Ref": "AWS::StackName"
-                    },
-                    "         -r MonitoringInstance ",
-                    "         --configsets InstallAndRun ",
-                    "         --region ",
-                    {
-                      "Ref": "AWS::Region"
-                    },
-                    "\n",
-                    "runas=root\n"
-                  ]
-                ]
-               }
-             }
-            
-            },
-
+              "/var/www/html/index.php" : {
+                "content" : { "Fn::Join" : [ "", [
+                  "<html>\n",
+                  "  <head>\n",
+                  "    <title>AWS CloudFormation PHP Sample</title>\n",
+                  "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=ISO-8859-1\">\n",
+                  "  </head>\n",
+                  "  <body>\n",
+                  "    <h1>Welcome to the AWS CloudFormation PHP Sample</h1>\n",
+                  "    <p/>\n",
+                  "    <?php\n",
+                  "      // Print out the current data and time\n",
+                  "      print \"The Current Date and Time is: <br/>\";\n",
+                  "      print date(\"g:i A l, F j Y.\");\n",
+                  "    ?>\n",
+                  "    <p/>\n",
+                  "    <?php\n",
+                  "      // Setup a handle for CURL\n",
+                  "      $curl_handle=curl_init();\n",
+                  "      curl_setopt($curl_handle,CURLOPT_CONNECTTIMEOUT,2);\n",
+                  "      curl_setopt($curl_handle,CURLOPT_RETURNTRANSFER,1);\n",
+                  "      // Get the hostname of the instance from the instance metadata\n",
+                  "      curl_setopt($curl_handle,CURLOPT_URL,'http://169.254.169.254/latest/meta-data/public-hostname');\n",
+                  "      $hostname = curl_exec($curl_handle);\n",
+                  "      if (empty($hostname))\n",
+                  "      {\n",
+                  "        print \"Sorry, for some reason, we got no hostname back <br />\";\n",
+                  "      }\n",
+                  "      else\n",
+                  "      {\n",
+                  "        print \"Server = \" . $hostname . \"<br />\";\n",
+                  "      }\n",
+                  "      // Get the instance-id of the instance from the instance metadata\n",
+                  "      curl_setopt($curl_handle,CURLOPT_URL,'http://169.254.169.254/latest/meta-data/instance-id');\n",
+                  "      $instanceid = curl_exec($curl_handle);\n",
+                  "      if (empty($instanceid))\n",
+                  "      {\n",
+                  "        print \"Sorry, for some reason, we got no instance id back <br />\";\n",
+                  "      }\n",
+                  "      else\n",
+                  "      {\n",
+                  "        print \"EC2 instance-id = \" . $instanceid . \"<br />\";\n",
+                  "      }\n",
+                  "    ?>\n",
+                  "    <h2>PHP Information</h2>\n",
+                  "    <p/>\n",
+                  "    <?php\n",
+                  "      phpinfo();\n",
+                  "    ?>\n",
+                  "  </body>\n",
+                  "</html>\n"
+                ]]},
+                "mode"  : "000600",
+                "owner" : "apache",
+                "group" : "apache"
+              }
+	   },
             "services" : {
-              "sysvinit" : {  
-                "httpd"   : { "enabled" : "true", "ensureRunning" : "true" },
-                "cfn-hup" : { "enabled" : "true", "ensureRunning" : "true",
-                              "files" : ["/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf"]}
-              }
-            } 
-          },
-          "Configure" : {
-            "commands" : {
-              "01_set_mysql_root_password" : {
-                "command" : { "Fn::Join" : ["", ["mysqladmin -u ",{ "Ref" : "DBUser" }," password '", { "Ref" : "DBPassword" }, "'"]]},
-                "test" : { "Fn::Join" : ["", ["$(mysql ", { "Ref" : "DBUser" }, " -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"]]}
-              },
-              "02_create_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /tmp/setup.mysql"]]},
-                "test" : { "Fn::Join" : ["", ["$(mysql ", { "Ref" : "DBUser" }, " -u ",{ "Ref" : "DBUser" }," --password='", { "Ref" : "DBPassword" }, "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"]]}
-              },
-	      "03_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/schema.sql"]]}
-	      },
-	      "04_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < usr/share/doc/zabbix-server-mysql-3.0.0/create/images.sql"]]}
-	      },
-	      "05_database" : {
-                "command" : { "Fn::Join" : ["", ["mysql -u ",{ "Ref" : "DBUser" },"  --password='", { "Ref" : "DBPassword" }, "' < /usr/share/doc/zabbix-server-mysql-3.0.0/create/data.sql"]]}
-              }
-            },
-          "services": {
-            "sysvinit": {
-              "httpd": {
-                "enabled": "true",
-                "ensureRunning": "true"
-              },
-              "zabbix-server": {
-                "enabled": "true",
-                "ensureRunning": "true"
-              }           
+              "sysvinit" : {
+                "httpd" : {
+                  "enabled" : "true",
+                  "ensureRunning" : "true"
+                },
+                "cfn-hup" : {
+                  "enabled" : "true",
+                  "ensureRunning" : "true",
+                  "files" : [ "/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf" ]
+                }
             }
-        },
-	"Discovery" : {
-            "commands" : {
-		"01_Scan Network and add hosts" : {
-                	"command" : "echo ufuk"
-	     	}
-	     }
-        }
+          }
+	}
      }
     }  
    }
   },
     "Outputs": {
-      "ZabbixURL": {
-        "Description": "URL for monitoring server",
+      "MonitoringURL": {
+        "Description": "URL for Monitoring server",
         "Value": {
           "Fn::Join": [
             "",
@@ -238,7 +211,7 @@
                   "MonitoringInstance",
                   "PublicDnsName"
                 ]
-              }, "/zabbix"
+              }
             ]
           ]
         }

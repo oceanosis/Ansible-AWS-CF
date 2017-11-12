@@ -21,41 +21,48 @@
       "Type": "String",
       "Default": "Automation-Test"
     },
-    "DBName" : {
+    "DBTable" : {
      "Type": "String",
       "Default": "management"
     }
   },
   "Resources": {
-    "WaitHandle" : {
-      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    "IPAddress" : {
+      "Type" : "AWS::EC2::EIP"
     },
 
-    "WaitCondition" : {
-      "Type" : "AWS::CloudFormation::WaitCondition",
-      "DependsOn" : "MonitoringInstance",
+    "IPAssoc" : {
+      "Type" : "AWS::EC2::EIPAssociation",
       "Properties" : {
-        "Handle" : {"Ref" : "WaitHandle"},
-        "Timeout" : "200"
+        "InstanceId" : { "Ref" : "ManagementInstance" },
+        "EIP" : { "Ref" : "IPAddress" }
       }
     },
-    "MonitoringInstance": {
+    "ManagementInstance": {
       "Type": "AWS::EC2::Instance",
 	"Properties": {
           "KeyName": {  "Ref": "KeyName"     },
           "ImageId": { "Ref":"ImageId" },
           "InstanceType": { "Ref": "InstanceType"    },
-          "SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1b"}},
+          "SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "PublicSubnetID1a"}},
           "SecurityGroupIds": [{"Fn::ImportValue" : {"Fn::Sub" : "PublicSGID"}}],
           "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
              "#!/bin/bash -xe\n",
-             "yum install -y aws-cfn-bootstrap\n",
+	     "yum update -y\n",
+             "yum update -y aws-cfn-bootstrap\n",
+             "# InstallAndRun the files and packages from the metadata\n",
 
              "# Install the files and packages from the metadata\n",
-             "/opt/aws/bin/cfn-init -v ",
+             "/opt/aws/bin/cfn-init ",
              "         --stack ", { "Ref" : "AWS::StackName" },
-             "         --resource WebServerInstance ",
-             "         --configsets Install ",
+             "         --resource ManagementInstance ",
+             "         --configsets InstallAndRun ",
+             "         --region ", { "Ref" : "AWS::Region" }, "\n",
+
+             "# Signal the status from cfn-init\n",
+             "/opt/aws/bin/cfn-signal -e $? ",
+             "         --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource ManagementInstance ",
              "         --region ", { "Ref" : "AWS::Region" }, "\n"
 		]]}},
           "Tags": [
@@ -66,12 +73,17 @@
             	}
            },   {
              "Key": "Name",
-               "Value": "MonitoringServer"
+               "Value": "ManagementServer"
              }
            ]
          },
+       "CreationPolicy" : {
+        "ResourceSignal" : {
+          "Timeout" : "PT5M"
+        }
+       },
         "Metadata" : {
-          "Comment1" : "Management index.php - Apache Servers Installation",
+          "Comment1" : "Management index.php - Apache Servers InstallAndRunation",
 	  "AWS::CloudFormation::Init" : {
           "configSets" : {
             "InstallAndRun" : [ "Install" ]
@@ -80,20 +92,37 @@
           "Install" : {
             "packages" : {
               "yum" : {
-                "mysql"        : [],
-                "mysql-libs"   : [],
                 "httpd"        : [],
-                "php"          : [],
-                "epel-release"          : [],
-                "httpd-devel"          : [],
-                "php-cli"          : [],
-                "php-pear"          : [],
-                "php-gd"          : [],
-                "php-mbstring"          : [],
-                "php-xml"          : []
+                "php"          : []
               }
 	     },
-	"files" : {
+	    "files" : {
+	      "/etc/cfn/cfn-hup.conf" : {
+                "content" : { "Fn::Join" : [ "", [
+                  "[main]\n",
+                  "stack=", { "Ref" : "AWS::StackId" }, "\n",
+                  "region=", { "Ref" : "AWS::Region" }, "\n"
+                ]]},
+                "mode"    : "000400",
+                "owner"   : "root",
+                "group"   : "root"
+              },	
+              "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
+                "content": { "Fn::Join": [ "", [
+                  "[cfn-auto-reloader-hook]\n",
+                  "triggers=post.update\n",
+                  "path=Resources.ManagementInstance.Metadata.AWS::CloudFormation::Init\n",
+                  "action=/opt/aws/bin/cfn-init -v ",
+                          "         --stack ", { "Ref" : "AWS::StackName" },
+                          "         --resource ManagementInstance ",
+                          "         --configsets InstallAndRun ",
+                          "         --region ", { "Ref" : "AWS::Region" }, "\n",
+                  "runas=root\n"
+                ]]},          
+                "mode"  : "000400",
+                "owner" : "root",
+                "group" : "root"
+              },
               "/var/www/html/index.php" : {
                 "content" : { "Fn::Join" : [ "", [
                   "<html>\n",
@@ -149,11 +178,19 @@
                 "mode"  : "000600",
                 "owner" : "apache",
                 "group" : "apache"
-              },
-            "services" : {
-              "sysvinit" : {  
-                "httpd"   : { "enabled" : "true", "ensureRunning" : "true" }
               }
+	   },
+            "services" : {
+              "sysvinit" : {
+                "httpd" : {
+                  "enabled" : "true",
+                  "ensureRunning" : "true"
+                },
+                "cfn-hup" : {
+                  "enabled" : "true",
+                  "ensureRunning" : "true",
+                  "files" : [ "/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf" ]
+                }
             }
           }
 	}
@@ -162,8 +199,8 @@
    }
   },
     "Outputs": {
-      "ZabbixURL": {
-        "Description": "URL for monitoring server",
+      "ManagementURL": {
+        "Description": "URL for Management server",
         "Value": {
           "Fn::Join": [
             "",
@@ -171,10 +208,10 @@
               "http://",
               {
                 "Fn::GetAtt": [
-                  "MonitoringInstance",
+                  "ManagementInstance",
                   "PublicDnsName"
                 ]
-              }, "/zabbix"
+              }
             ]
           ]
         }

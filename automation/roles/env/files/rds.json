@@ -71,7 +71,7 @@
         "Properties": {
           "Engine": "MySQL",
           "MultiAZ": { "Ref" : "MultiAZDatabase" },
-          "DBInstanceClass": "db.t2.large",
+          "DBInstanceClass": "db.t2.micro",
  	  "StorageType": "gp2",
           "AllocatedStorage": "20",
           "DBName": { "Ref" : "DBName" },

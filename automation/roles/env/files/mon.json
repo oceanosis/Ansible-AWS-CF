@@ -144,6 +144,16 @@
 			 "AllowOverride None\n",
 			 "Order allow,deny\n",
 			 "Allow from All\n",
+			"<IfModule mod_php5.c>\n",
+        		"php_value max_execution_time 300\n",
+       			" php_value memory_limit 128M\n",
+        		"php_value post_max_size 16M\n",
+        		"php_value upload_max_filesize 2M\n",
+       			" php_value max_input_time 300\n",
+       			" php_value always_populate_raw_post_data -1\n",
+        		"  php_value date.timezone Europe/Istanbul\n",
+     			"</IfModule>\n",
+
 			"</Directory>\n"
                 ]]},
                 "mode"    : "000744",

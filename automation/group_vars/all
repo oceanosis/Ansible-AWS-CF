@@ -25,7 +25,7 @@ region: us-east-1
 
 KeyName: Automation-Test
 
-MultiAZDb: false
+MultiAZDb: true
 
 rdsdb: mybb
 rdsuser: mybb

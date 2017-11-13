@@ -137,7 +137,19 @@
 
              },
 	   "files" : {
-
+	      "/etc/httpd/conf.d/zabbix.conf" : {
+		"content" : { "Fn::Join" : [ "", [
+			"<Directory '/usr/share/zabbix'>\n",
+			 "Options FollowSymLinks\n",
+			 "AllowOverride None\n",
+			 "Order allow,deny\n",
+			 "Allow from All\n",
+			"</Directory>\n"
+                ]]},
+                "mode"    : "000744",
+                "owner"   : "root",
+                "group"   : "root"
+              },
 	      "/etc/cfn/cfn-hup.conf" : {
                 "content" : { "Fn::Join" : [ "", [
                   "[main]\n",
@@ -195,33 +207,51 @@
                        "mysql -h ", { "Fn::ImportValue": {"Fn::Sub": "Endpoint" } },
                        " -u ",{ "Ref" : "DBUser" },
                        "  --password='", { "Ref" : "DBPassword" },"'",
-                       " -e 'GRANT ALL ON RIVILEGES on ",{ "Ref" : "MonDB" },
-			".* to ",{ "Ref" : "MonUser" },"@",{"Fn::ImportValue": {"Fn::Sub": "Endpoint" }},
-			 " IDENTIFIED BY ",{ "Ref" : "MonPassword" },"; FLUSH PRIVILEGES;'\n"
+                       " -e 'GRANT ALL on `",{ "Ref" : "MonDB" },
+			"`.* to `",{ "Ref" : "MonUser" },"`@`%`",
+			 " IDENTIFIED BY \"",{ "Ref" : "MonPassword" },"\";'\n"
 
 		     ]]}
               },
-	      "03_schema import " : {
+              "03_flush" : {
+                "command" : { "Fn::Join" : ["", [
+                       "mysql -h ", { "Fn::ImportValue": {"Fn::Sub": "Endpoint" } },
+                       " -u ",{ "Ref" : "DBUser" },
+                       "  --password='", { "Ref" : "DBPassword" },"'",
+                       " -e 'FLUSH PRIVILEGES;'\n"
+
+                     ]]}
+              },
+
+	      "04_schema import " : {
                 "command" : { "Fn::Join" : ["", ["mysql -h" , {
                       "Fn::ImportValue": {
                         "Fn::Sub": "Endpoint"
                       }
-                    }," -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "MonDB" }," < /usr/share/doc/zabbix-server-mysql-3.0.0/create/schema.sql"]]}
-	      },
-	      "04_images import" : {
-                "command" : { "Fn::Join" : ["", ["mysql -h ", {
-                      "Fn::ImportValue": {
-                        "Fn::Sub": "Endpoint"
-                      }
-                    }, " -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "MonDB" }," < usr/share/doc/zabbix-server-mysql-3.0.0/create/images.sql"]]}
+                    }," -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "MonDB" }," < /usr/share/doc/zabbix-server-mysql-1.8.22/create/schema/mysql.sql"]]}
 	      },
 	      "05_data import" : {
                 "command" : { "Fn::Join" : ["", ["mysql -h" , {
                       "Fn::ImportValue": {
                         "Fn::Sub": "Endpoint"
                       }
-                    }," -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "MonDB" }," < /usr/share/doc/zabbix-server-mysql-3.0.0/create/data.sql"]]}
-              }
+                    }," -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "MonDB" }," < /usr/share/doc/zabbix-server-mysql-1.8.22/create/data/data.sql"]]}
+              },
+            "05_ DB": {
+              "command": { "Fn::Join" : ["", ["sed -i 's/.*# DBHost=.*/DBName='",{ "Ref" : "MonDB" },"'/g' /etc/zabbix/zabbix_server.conf"]]}
+            },
+            "06_ User" : {
+              "command": { "Fn::Join" : ["", ["sed -i 's/.*DBUser=.*/DBUser='",{ "Ref" : "MonUser" },"'/g' /etc/zabbix/zabbix_server.conf"]]}
+            },           
+	    "07_ Password" : {
+              "command": { "Fn::Join" : ["", ["sed -i 's/.*DBPassword=.*/DBPassword='",{ "Ref" : "MonPassword" },"'/g' /etc/zabbix/zabbix_server.conf"]]}
+            },
+           "08_ Hostname ": {
+              "command": "HOST=$(curl http://169.254.169.254/latest/meta-data/local-hostname) && sed -i 's/.*Hostname=.*/Hostname='$HOST'/g' /etc/zabbix/zabbix_agentd.conf"
+            },
+            "09_ IP" : {
+              "command": "IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4) && sed -i 's/.*Server=.*/Server='$IP'/g' /etc/zabbix/zabbix_agentd.conf"
+            }
             },
           "services": {
             "sysvinit": {
@@ -232,17 +262,22 @@
               "zabbix-server": {
                 "enabled": "true",
                 "ensureRunning": "true"
-              }           
+              }, 
+             "zabbix-agent": {
+                "enabled": "true",
+                "ensureRunning": "true"
+              }
+           
             }
         }
        },
 	"Discovery" : {
             "commands" : {
 		"01_Discovery Rule Prepare" : {
-                	"command" : "THIS COMMAND WILL SCAN NETWORK ACCORDING TO DISCOVERY RULE plus SUBNET"
+                	"command" : "echo 'THIS COMMAND WILL SCAN NETWORK ACCORDING TO DISCOVERY RULE plus SUBNET'"
 	     	},
                 "02_Scan Network and add hosts to watch group" : {
-                        "command" : "THIS COMMAND WILL SCAN NETWORK ACCORDING TO DISCOVERY RULE plus SUBNET"
+                        "command" : "echo 'THIS COMMAND WILL SCAN NETWORK ACCORDING TO DISCOVERY RULE plus SUBNET'"
                 }
 
 	     }
@@ -264,10 +299,17 @@
                   "MonitoringInstance",
                   "PublicDnsName"
                 ]
-              }
+              },"/zabbix"
             ]
           ]
         }
+    },
+ "MonitoringInfo": {
+        "Description": "Default User / Pass",
+        "Value": "User:admin Pass:zabbix"
+        
     }
+
+
   }
 }

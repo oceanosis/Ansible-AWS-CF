@@ -1,0 +1,56 @@
+{
+    "management": [
+        {
+ "PutRequest": {
+                "Item": {
+                    "ParameterID" : {  "S": "5" },
+                    "ParameterName" : {  "S": "admin" },
+                    "ParameterValue": { "S": "102300" }
+                    }
+        }
+
+    },
+ "PutRequest": {
+                "Item": {
+                    "ParameterID" : {  "S": "1" },
+                    "ParameterName" : {  "S": "email" },
+                    "ParameterValue": { "S": "dumluufuk@gmail.com" }
+                    }
+        }
+
+    },
+        {
+
+ "PutRequest": {
+                "Item": {
+                    "ParameterID" : {  "S": "2" },
+                    "ParameterName" : {  "S": "rdsuser" },
+                    "ParameterValue": { "S": "mybb" }
+                    }
+        }
+
+    },
+ "PutRequest": {
+                "Item": {
+                    "ParameterID" : {  "S": "3" },
+                    "ParameterName" : {  "S": "rdspass" },
+                    "ParameterValue": { "S": "ufuk1023" }
+                    }
+        }
+
+    },
+        {
+
+ "PutRequest": {
+                "Item": {
+                    "ParameterID" : {  "S": "4" },
+                    "ParameterName" : {  "S": "MultiAZDb" },
+                    "ParameterValue": { "S": "true" }
+                    }
+        }
+
+    }
+
+  ]
+}
+   

@@ -24,3 +24,22 @@ export PATH=$PATH:/usr/local/bin
 echo "export PATH=$PATH:/usr/local/bin" >> /root/.bashrc
 source /root/.bashrc
 
+#######################################################
+# Type of automation: Ansible + CloudFormation Stacks #
+#######################################################
+# Run environment creation with Ansible Cloud Modules
+# ansible-playbook 
+
+# create aws environment
+cd /usr/local/src
+git clone https://github.com/oceanosis/awsProject
+cd /usr/local/src/awsProject/automation
+DATE=$(date "+%Y-%m-%d-%H-%M-%S")
+
+ansible-playbook aws-automation.yml > /usr/local/src/ansible-$DATE.log
+if [[ $? -ne 0 ]]; then
+echo "Ansible playbook did not completed. Check process and errors in log" >> /usr/local/src/ansible-$DATE.log
+exit 1
+fi
+
+

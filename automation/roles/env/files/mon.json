@@ -320,10 +320,27 @@
         }
     },
  "MonitoringInfo": {
-        "Description": "Default User / Pass",
+        "Description": "Server Default User / Pass",
         "Value": "User:Admin Pass:zabbix"
         
+    },
+"MonitoringDB": {
+        "Description": "Server Installation: DB Host / Name / User / Pass",
+        "Value": {
+          "Fn::Join": [
+            "",
+            [
+              "DBHost:",{ "Fn::ImportValue": {"Fn::Sub": "Endpoint" } },
+              "DBName", { "Ref" : "MonDB" },
+              "DBUser", { "Ref" : "MonUser" },
+              "DBPassword", { "Ref" : "MonPassword" }
+            ]
+          ]
+        }
+
+
     }
+
 
 
   }

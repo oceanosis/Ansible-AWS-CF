@@ -139,6 +139,7 @@
 	   "files" : {
 	      "/etc/httpd/conf.d/zabbix.conf" : {
 		"content" : { "Fn::Join" : [ "", [
+			"Alias /zabbix /usr/share/zabbix\n",
 			"<Directory '/usr/share/zabbix'>\n",
 			 "Options FollowSymLinks\n",
 			 "AllowOverride None\n",
@@ -316,7 +317,7 @@
     },
  "MonitoringInfo": {
         "Description": "Default User / Pass",
-        "Value": "User:admin Pass:zabbix"
+        "Value": "User:Admin Pass:zabbix"
         
     }
 

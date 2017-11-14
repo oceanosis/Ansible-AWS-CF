@@ -6,6 +6,8 @@
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
         "GroupDescription" : "Enable HTTP access via port 80 to world and limit SSH access to internal",
+        "GroupName": "PublicSG",
+        "GroupDescription": "PublicSG",
         "VpcId": {"Fn::ImportValue" : {"Fn::Sub" : "VpcId"}},
         "SecurityGroupIngress" : [
           {
@@ -15,11 +17,30 @@
             "CidrIp" : "10.0.0.0/16"
           },
           {
+            "IpProtocol" : "icmp",
+            "FromPort" : "8",
+            "ToPort" : "-1",
+            "CidrIp" : "10.0.0.0/16"
+          },
+          {
 	  "IpProtocol" : "tcp",
           "FromPort" : "80",
           "ToPort" : "80",
           "CidrIp" : "0.0.0.0/0"
-        } ]
+        } ],
+	  "Tags": [
+          {
+            "Key": "Application",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          },
+          {
+            "Key": "Name",
+            "Value": "PublicSG"
+          }
+        ]
+
       }
     },
 
@@ -34,7 +55,14 @@
          "FromPort" : "0",
          "ToPort" : "65535",
          "CidrIp" : "10.0.0.0/16"
-        }
+        },
+          {
+            "IpProtocol" : "icmp",
+            "FromPort" : "8",
+            "ToPort" : "-1",
+            "CidrIp" : "10.0.0.0/16"
+          }
+
         ],
 	"VpcId": {"Fn::ImportValue" : {"Fn::Sub" : "VpcId"}},
         "Tags": [

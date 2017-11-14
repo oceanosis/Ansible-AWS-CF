@@ -249,7 +249,11 @@
                     }," -u ",{ "Ref" : "MonUser" },"  --password='", { "Ref" : "MonPassword" }, "' ",{ "Ref" : "MonDB" }," < /usr/share/doc/zabbix-server-mysql-1.8.22/create/data/data.sql"]]}
               },
             "05_ DB": {
-              "command": { "Fn::Join" : ["", ["sed -i 's/.*# DBHost=.*/DBName='",{ "Ref" : "MonDB" },"'/g' /etc/zabbix/zabbix_server.conf"]]}
+              "command": { "Fn::Join" : ["", ["sed -i 's/.*# DBHost=.*/DBHost='",{ "Fn::ImportValue": {"Fn::Sub": "Endpoint" } },"'/g' /etc/zabbix/zabbix_server.conf"]]}
+            },
+
+            "05_ DB": {
+              "command": { "Fn::Join" : ["", ["sed -i 's/.*DBName=.*/DBName='",{ "Ref" : "MonDB" },"'/g' /etc/zabbix/zabbix_server.conf"]]}
             },
             "06_ User" : {
               "command": { "Fn::Join" : ["", ["sed -i 's/.*DBUser=.*/DBUser='",{ "Ref" : "MonUser" },"'/g' /etc/zabbix/zabbix_server.conf"]]}
